@@ -11,6 +11,4 @@ const InventarioSchema = new mongoose.Schema({
 }, { timestamps: true });
 
 // Crear el modelo
-const Inventario = mongoose.model('Inventario', InventarioSchema);
-
-module.exports = Inventario;
+export default mongoose.model('Inventario', InventarioSchema);
