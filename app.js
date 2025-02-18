@@ -21,7 +21,7 @@ mongoose.connect(process.env.MONGODB_CCL)
     .catch((error) => console.log('Error en la conexión a la base de datos:', error));
 
 
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 3200;
 app.listen(PORT, () => {
     console.log('servidor corriendo en el puerto ${PORT}');
 });
