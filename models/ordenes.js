@@ -1,10 +1,10 @@
-const mongoose = require('mongoose');
+import mongoose from "mongoose";
 
 // Definir el esquema de Ordenes
 const OrdenesSchema = new mongoose.Schema({
     usuarioId: { type: mongoose.Schema.Types.ObjectId, required: true, ref: 'Usuarios' },// Ref a la colección User
     products: [{
-        productId: { type: mongoose.Schema.Types.ObjectId, required: true, ref: 'Product' }, // Ref a la colección Product
+        productId: { type: mongoose.Schema.Types.ObjectId, required: true, ref: 'Productos' }, // Ref a la colección Product
 
         quantity: { type: Number, required: true },
         price: { type: Number, required: true }
@@ -15,6 +15,5 @@ const OrdenesSchema = new mongoose.Schema({
 }, { timestamps: true });
 
 // Crear el modelo
-const Ordenes = mongoose.model('Ordenes', OrdenesSchema);
+export default mongoose.model('Ordenes', OrdenesSchema);
 
-module.exports = Ordenes;
