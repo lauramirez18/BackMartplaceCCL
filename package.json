@@ -1,0 +1,37 @@
+{
+  "name": "proyecto-final",
+  "version": "1.0.0",
+  "description": "marketplace",
+  "type": "module",
+  "main": "app.js",
+  "scripts": {
+    "test": "start"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/lauramirez18/BackMartplaceCCL.git"
+  },
+  "keywords": [
+    "Proyecto",
+    "Final",
+    "CCL."
+  ],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/lauramirez18/BackMartplaceCCL/issues"
+  },
+  "homepage": "https://github.com/lauramirez18/BackMartplaceCCL#readme",
+  "dependencies": {
+    "bcrypt": "^5.1.1",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.7",
+    "express": "^4.21.2",
+    "express-validator": "^7.2.1",
+    "jsonwebtoken": "^9.0.2",
+    "mongoose": "^8.10.1"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.9"
+  }
+}
