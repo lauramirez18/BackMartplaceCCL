@@ -1,7 +1,6 @@
 import { Router } from "express";
 import { check } from "express-validator";
-import {validarJWT} from "../middlewares/validar-jwt.js";
-import { validarCampos } from "../middlewares/validar-campos.js";
+
 
 
 
@@ -12,7 +11,7 @@ import {
     getOrdenById,
     updateOrden,
     cambiarEstadoOrden
-} from "../controllers/ordenes.js";
+} from "../controllers/ordenesc.js";
 
 const router = express.Router();
 

@@ -1,6 +1,7 @@
-import User from '../models/usuario.js'
-import { generarJWT } from '../middleware/jwt.js'
+import User from '../models/usuarios.js'
+import { generarJWT } from '../middleware/validar-jwt.js'
 import bcrypt from 'bcryptjs';
+
 
 const httpUsers = {
 
