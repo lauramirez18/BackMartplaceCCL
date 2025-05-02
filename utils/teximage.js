@@ -9,12 +9,7 @@ dotenv.config();
     });
 
     try {
-        const uploadResult = await cloudinary.uploader.upload(
-            'https://res.cloudinary.com/demo/image/upload/getting-started/shoes.jpg',
-            {
-                public_id: 'shoes',
-            }
-        );
+        const uploadResult = await cloudinary.uploader.upload('public/images/image.png');
         
         console.log('Imagen subida:', uploadResult.secure_url);
     } catch (error) {

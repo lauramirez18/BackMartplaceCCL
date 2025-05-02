@@ -10,7 +10,7 @@ import {
     getOrdenes,
     getOrdenById,
     updateOrden,
-    cambiarEstadoOrden
+
 } from "../controllers/ordenesc.js";
 
 const router = express.Router();
@@ -27,7 +27,6 @@ router.get("/:id", getOrdenById);
 // Ruta para actualizar el estado de una orden
 router.put("/:id", updateOrden);
 
-// Ruta para cambiar el estado de una orden
-router.patch("/:id/status", cambiarEstadoOrden);
+
 
 export default router;

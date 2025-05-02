@@ -7,6 +7,19 @@ export const createTransaccion = async (req, res) => {
     try {
         const { productoId, type, quantity, userId, reason } = req.body;
 
+        // Validaciones básicas
+        if (!productoId || !type || !quantity || !userId) {
+            return res.status(400).json({ message: "Todos los campos obligatorios deben estar completos" });
+        }
+
+        if (!['entrada', 'salida', 'devolucion'].includes(type)) {
+            return res.status(400).json({ message: "Tipo de transacción no válido" });
+        }
+
+        if (quantity <= 0) {
+            return res.status(400).json({ message: "La cantidad debe ser mayor a 0" });
+        }
+
         // Verificar si el producto existe
         const producto = await Productos.findById(productoId);
         if (!producto) return res.status(404).json({ message: "Producto no encontrado" });
@@ -14,9 +27,6 @@ export const createTransaccion = async (req, res) => {
         // Verificar si el usuario existe
         const usuario = await Usuarios.findById(userId);
         if (!usuario) return res.status(404).json({ message: "Usuario no encontrado" });
-
-        // Validar cantidad
-        if (quantity <= 0) return res.status(400).json({ message: "La cantidad debe ser mayor a 0" });
 
         // Actualizar stock del producto
         if (type === 'entrada') {
@@ -29,7 +39,7 @@ export const createTransaccion = async (req, res) => {
         }
         await producto.save();
 
-        // Crear la transacción en el inventario
+        // Crear la transacción
         const nuevaTransaccion = new Inventario({
             productoId,
             type,
@@ -42,11 +52,12 @@ export const createTransaccion = async (req, res) => {
         res.status(201).json(nuevaTransaccion);
 
     } catch (error) {
-        res.status(500).json({ message: error.message });
+        console.error("Error al registrar transacción:", error);
+        res.status(500).json({ message: "Error al registrar transacción", error: error.message });
     }
 };
 
-// Obtener todas las transacciones del inventario
+// Obtener todas las transacciones
 export const getTransacciones = async (req, res) => {
     try {
         const transacciones = await Inventario.find()
@@ -55,7 +66,7 @@ export const getTransacciones = async (req, res) => {
 
         res.status(200).json(transacciones);
     } catch (error) {
-        res.status(500).json({ message: error.message });
+        res.status(500).json({ message: "Error al obtener transacciones", error: error.message });
     }
 };
 
@@ -71,43 +82,32 @@ export const getTransaccionPorId = async (req, res) => {
 
         res.status(200).json(transaccion);
     } catch (error) {
-        res.status(500).json({ message: error.message });
+        res.status(500).json({ message: "Error al obtener la transacción", error: error.message });
     }
 };
 
-// Actualizar una transacción (No recomendable modificar registros de inventario, pero si necesario)
+// Actualizar el motivo de una transacción (opcional)
 export const toggleInventarioState = async (req, res) => {
     try {
         const { id } = req.params;
-        const { type, quantity, reason } = req.body;
+        const { reason } = req.body;
 
         const transaccion = await Inventario.findById(id);
         if (!transaccion) return res.status(404).json({ message: "Transacción no encontrada" });
 
-        // Modificar el inventario en función de la actualización (cuidado con la lógica)
-        if (type && type !== transaccion.type) {
-            return res.status(400).json({ message: "No se permite cambiar el tipo de transacción" });
-        }
-
-        if (quantity && quantity !== transaccion.quantity) {
-            return res.status(400).json({ message: "No se permite cambiar la cantidad de la transacción" });
-        }
-
-        // Actualizar solo el motivo si es necesario
+        // Solo se permite actualizar el motivo
         transaccion.reason = reason || transaccion.reason;
         await transaccion.save();
 
         res.status(200).json(transaccion);
     } catch (error) {
-        res.status(500).json({ message: error.message });
+        res.status(500).json({ message: "Error al actualizar la transacción", error: error.message });
     }
 };
 
-
-
-export default{
+export default {
     createTransaccion,
     getTransacciones,
     getTransaccionPorId,
     toggleInventarioState
-}
+};

@@ -3,14 +3,13 @@ import Categorias from "../models/categorias.js";
 // Crear una categoría
 export const createCategoria = async (req, res) => {
     try {
-        const { nombre, descripcion } = req.body;
+        const { name, description } = req.body;
 
-     
-        if (!nombre || !descripcion) {
-            return res.status(400).json({ message: "Nombre y descripción son obligatorios" });
+        if (!name || !description) {
+            return res.status(400).json({ message: "Name y description son obligatorios" });
         }
 
-        const categoria = new Categorias({ nombre, descripcion });
+        const categoria = new Categorias({ name, description });
         await categoria.save();
 
         res.status(201).json(categoria);
@@ -52,48 +51,44 @@ export const getCategoriaById = async (req, res) => {
 // Actualizar una categoría
 export const updateCategoria = async (req, res) => {
     try {
-      const { id } = req.params; 
-      const { nombre, descripcion } = req.body;
-  
-      
-      if (!nombre || !descripcion) {
-        return res.status(400).json({ message: "Nombre y descripción son obligatorios." });
-      }
-  
-      
-      const updatedCategoria = await Categorias.findByIdAndUpdate(
-        id,
-        { nombre, descripcion },
-        { new: true }
-      );
-  
-      if (!updatedCategoria) {
-        return res.status(404).json({ message: "Categoría no encontrada." });
-      }
-  
-      res.status(200).json(updatedCategoria); 
+        const { id } = req.params; 
+        const { name, description } = req.body;
+
+        if (!name || !description) {
+            return res.status(400).json({ message: "Name y description son obligatorios." });
+        }
+
+        const updatedCategoria = await Categorias.findByIdAndUpdate(
+            id,
+            { name, description },
+            { new: true }
+        );
+
+        if (!updatedCategoria) {
+            return res.status(404).json({ message: "Categoría no encontrada." });
+        }
+
+        res.status(200).json(updatedCategoria); 
     } catch (error) {
-      console.error("Error al actualizar la categoría:", error);
-      res.status(500).json({ message: "Error al actualizar la categoría.", error: error.message });
+        console.error("Error al actualizar la categoría:", error);
+        res.status(500).json({ message: "Error al actualizar la categoría.", error: error.message });
     }
-  };
-  
+};
 
-
+// Cambiar estado de una categoría
 export const toggleCategoriaState = async (req, res) => {
     try {
         const { id } = req.params;
-        const { estado } = req.body;
+        const { state } = req.body;
 
-       
-        if (!["1", "0"].includes(estado)) {
+        if (!["1", "0"].includes(state)) {
             return res.status(400).json({ message: "Estado no válido. Debe ser '1' (activo) o '0' (inactivo)" });
         }
 
         const updatedCategoria = await Categorias.findByIdAndUpdate(
             id,
-            { estado },
-            { new: true } 
+            { state },
+            { new: true }
         );
 
         if (!updatedCategoria) {
