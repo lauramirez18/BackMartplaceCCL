@@ -5,7 +5,7 @@ export const createCategoria = async (req, res) => {
     try {
         const { name, description, img } = req.body;
 
-        if (!name || !description )  {
+        if (!name || !description ) {
             return res.status(400).json({ message: "Nombre y description son obligatorios" });
         }
 
