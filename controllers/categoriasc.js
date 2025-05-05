@@ -3,13 +3,13 @@ import Categorias from "../models/categorias.js";
 // Crear una categoría
 export const createCategoria = async (req, res) => {
     try {
-        const { name, description,img } = req.body;
+        const { name, description, img } = req.body;
 
-        if (!name || !description || !img) {
+        if (!name || !description )  {
             return res.status(400).json({ message: "Nombre y description son obligatorios" });
         }
 
-        const categoria = new Categorias({ name, description });
+        const categoria = new Categorias({ name, description, img });
         await categoria.save();
 
         res.status(201).json(categoria);
