@@ -30,7 +30,7 @@ const uploadImageFromUrl = async (url) => {
 // Crear un producto con validación de categoría
 export const createProducto = async (req, res) => {
     try {
-        const { name, price, stock, img, description, category, state } = req.body;
+        const { name, price, stock, img, description, category, state , marca} = req.body;
         
         // Validar que la categoría exista
         const categoriaExistente = await Categoria.findById(category);
@@ -54,6 +54,7 @@ export const createProducto = async (req, res) => {
             name,
             price,
             stock,
+            marca,
             description,
             img: cloudinaryImageUrl,
             category, // ObjectId de la categoría

@@ -22,9 +22,9 @@ const corsOptions = {
     'http://127.0.0.1:5173',
     'https://tudominio.com'
   ],
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'], // Añadido OPTIONS
-  allowedHeaders: ['Content-Type', 'Authorization', 'x-token'], // Añadido x-token
-  exposedHeaders: ['x-token'], // Para que el frontend pueda leer este header
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'], 
+  allowedHeaders: ['Content-Type', 'Authorization', 'x-token'], 
+  exposedHeaders: ['x-token'], 
   credentials: true,
   preflightContinue: false,
   optionsSuccessStatus: 204
@@ -32,8 +32,8 @@ const corsOptions = {
 
 app.use(cors(corsOptions));
 
-// Middleware para manejar preflight requests
-app.options('*', cors(corsOptions)); // Esto habilita preflight para todas las rutas
+
+app.options('*', cors(corsOptions)); 
 
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
