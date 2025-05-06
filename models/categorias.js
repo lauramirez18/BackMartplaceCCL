@@ -7,7 +7,7 @@ const categoriaSchema = new mongoose.Schema({
     unique: true,
     enum: [
       'portatiles',     // 1
-      'pc-escritorio',  // 2
+      'pcEscritorio',  // 2
       'celulares',      // 3
       'smartwatch',     // 4
       'pantallas',      // 5
