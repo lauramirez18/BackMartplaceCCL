@@ -1,39 +1,56 @@
-import mongoose from 'mongoose'
+import mongoose from 'mongoose';
 
-const productosSchema = new mongoose.Schema({
-    name: { type: String, required: true },
-    description: { type: String, required: true },
-    marca: { type: String, required: true },  
-    price: { type: Number, required: true },
-    category: { 
-        type: mongoose.Schema.Types.ObjectId, 
-        ref: 'Categorias', 
-        required: true 
-    },
-    stock: { type: Number, required: true },
-    img: { type: String, required: true },
-    state: { type: String, default: '1' },
-    // Detalles técnicos del producto
-    detalles: {
-        referencia: { type: String },
-        sistemaOperativo: { type: String },
-        almacenamiento: { type: String },
-        marcaProcesador: { type: String },
-        tipoAlmacenamiento: { type: String },
-        modeloProcesador: { type: String },
-        marcaGrafica: { type: String },
-        bateria: { type: String }
-    },
-    // Referencia a las reseñas
-    reseñas: [{
-        type: mongoose.Schema.Types.ObjectId,
-        ref: 'Reseña'
-    }],
-    // Promedio de calificaciones (para no calcularlo siempre)
-    promedioCalificacion: { type: Number, default: 0 }
-}, {
-    timestamps: true,
-    versionKey: false
-})
+const productoSchema = new mongoose.Schema({
+  nombre: {
+    type: String,
+    required: true,
+    trim: true
+  },
+  descripcion: {
+    type: String,
+    required: true
+  },
+  precio: {
+    type: Number,
+    required: true,
+    min: 0
+  },
+  marca: {
+    type: String,
+    required: true
+  },
+  imagen: {
+    type: String,
+    required: true
+  },
+  category: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Categoria',
+    required: true
+  },
+  subcategory: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Subcategoria',
+    required: true
+  },
+  detalles: {
+    type: Object,
+    required: true
+  },
+  stock: {
+    type: Number,
+    required: true,
+    min: 0
+  },
+  state: {
+    type: String,
+    enum: ['1', '0'],
+    default: '1'
+  },
+  createdAt: {
+    type: Date,
+    default: Date.now
+  }
+}, { versionKey: false });
 
-export default mongoose.model('Productos', productosSchema)
+export default mongoose.model('Producto', productoSchema);

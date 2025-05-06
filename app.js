@@ -10,6 +10,7 @@ import ordenes from './routes/ordenesr.js'
 import productos from './routes/productosr.js'
 import usuarios from './routes/usuariosr.js'
 import reseñas from "./routes/resenas.js";
+import subcategorias from "./routes/subcategorias.js";
 import authRoutes from "./routes/gogole.js"; 
 dotenv.config();
 
@@ -40,6 +41,7 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 app.use(express.static("public"));
 
 // Rutas
+app.use('/api/subcategorias', subcategorias);
 app.use('/api/auth', authRoutes); 
 app.use('/api/categorias', categorias);
 app.use('/api/inventario', inventario);
