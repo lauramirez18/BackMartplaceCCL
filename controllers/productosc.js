@@ -1,43 +1,49 @@
 import Producto from '../models/productos.js';
 import Categoria from '../models/categorias.js';
 import Subcategoria from '../models/subcategorias.js';
+import { uploadImages, deleteImages } from '../utils/teximage.js';
 
 export const createProducto = async (req, res) => {
   try {
-    const { category, subcategory, detalles } = req.body;
+    const { category, subcategory } = req.body;
 
-    // Validar relación categoría-subcategoría
+    // 1. Obtener el código de la categoría (enviar código desde el frontend)
+    const categoria = await Categoria.findById(category);
+    if (!categoria) {
+      return res.status(400).json({ error: 'La categoría no existe' });
+    }
+
+    // 2. Validar que la subcategoría pertenezca a la categoría (por código)
     const subcatValida = await Subcategoria.findOne({
       _id: subcategory,
-      categoriaPadre: category
+      categoriaPadre: categoria.codigo  // Compara con el código, no con el ID
     });
 
     if (!subcatValida) {
-      return res.status(400).json({ error: 'Subcategoría no válida para esta categoría' });
+      return res.status(400).json({ 
+        error: 'Subcategoría no válida para esta categoría',
+        details: `La subcategoría no está asociada a ${categoria.name} (${categoria.codigo})`
+      });
     }
 
-    // Validar detalles técnicos
-    const categoria = await Categoria.findById(category);
-    const schema = especificacionesSchema[categoria.codigo];
 
-    if (schema) {
-      const { error } = schema.validate(detalles);
-      if (error) {
-        return res.status(400).json({ 
-          error: `Error en especificaciones: ${error.details[0].message}`
-        });
-      }
+    // 3. Subir imágenes (tu código actual está correcto)
+    let imagenes = [];
+    if (req.files && req.files.length > 0) {
+      const results = await uploadImages(req.files);
+      imagenes = results.map(result => result.secure_url);
     }
 
-    // Crear producto
+    // 4. Crear producto
     const producto = new Producto({
       ...req.body,
+      imagenes,
       state: '1'
     });
 
     await producto.save();
 
-    // Respuesta con datos poblados
+    // 5. Poblar datos para la respuesta
     const productoPopulado = await Producto.findById(producto._id)
       .populate('category', 'name')
       .populate('subcategory', 'name');
@@ -45,11 +51,15 @@ export const createProducto = async (req, res) => {
     res.status(201).json(productoPopulado);
 
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    // Mejora el manejo de errores
+    console.error('Error en createProducto:', error);
+    res.status(500).json({ 
+      error: 'Error interno del servidor',
+      details: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
   }
 };
 
-// Obtener todos los productos (con filtros)
 export const getProductos = async (req, res) => {
   try {
     const { category, subcategory, minPrice, maxPrice } = req.query;
@@ -74,7 +84,6 @@ export const getProductos = async (req, res) => {
   }
 };
 
-// Obtener producto por ID
 export const getProductoById = async (req, res) => {
   try {
     const producto = await Producto.findById(req.params.id)
@@ -91,39 +100,53 @@ export const getProductoById = async (req, res) => {
   }
 };
 
-// Actualizar producto
 export const updateProducto = async (req, res) => {
   try {
-    const { detalles } = req.body;
+    const { imagenesEliminadas } = req.body;
+    const producto = await Producto.findById(req.params.id);
 
-    // Validar detalles si existen
-    if (detalles) {
-      const producto = await Producto.findById(req.params.id).populate('category');
-      const schema = especificacionesSchema[producto.category.codigo];
-
-      if (schema) {
-        const { error } = schema.validate(detalles);
-        if (error) {
-          return res.status(400).json({ error: error.details[0].message });
-        }
-      }
+    if (!producto) {
+      return res.status(404).json({ error: 'Producto no encontrado' });
     }
 
-    const productoActualizado = await Producto.findByIdAndUpdate(
-      req.params.id,
-      req.body,
-      { new: true }
-    )
-    .populate('category', 'name')
-    .populate('subcategory', 'name');
+    // Eliminar imágenes marcadas
+    if (imagenesEliminadas && imagenesEliminadas.length > 0) {
+      const publicIds = imagenesEliminadas.map(url => {
+        const parts = url.split('/');
+        const filename = parts[parts.length - 1];
+        return `productos/${filename.split('.')[0]}`;
+      });
+      await deleteImages(publicIds);
+      producto.imagenes = producto.imagenes.filter(img => !imagenesEliminadas.includes(img));
+    }
+
+    // Añadir nuevas imágenes
+    if (req.files && req.files.length > 0) {
+      const results = await uploadImages(req.files);
+      const nuevasUrls = results.map(result => result.secure_url);
+      producto.imagenes = [...producto.imagenes, ...nuevasUrls];
+    }
+
+    // Actualizar otros campos
+    Object.keys(req.body).forEach(key => {
+      if (key !== 'imagenesEliminadas' && key !== 'imagenes') {
+        producto[key] = req.body[key];
+      }
+    });
+
+    await producto.save();
+
+    const productoActualizado = await Producto.findById(req.params.id)
+      .populate('category', 'name')
+      .populate('subcategory', 'name');
 
     res.status(200).json(productoActualizado);
+
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
 };
 
-// Cambiar estado del producto
 export const toggleProductoState = async (req, res) => {
   try {
     const producto = await Producto.findById(req.params.id);

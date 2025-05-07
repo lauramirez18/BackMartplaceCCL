@@ -19,10 +19,10 @@ const productoSchema = new mongoose.Schema({
     type: String,
     required: true
   },
-  imagen: {
+  imagenes: [{  
     type: String,
     required: true
-  },
+  }],
   category: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Categoria',
@@ -51,6 +51,15 @@ const productoSchema = new mongoose.Schema({
     type: Date,
     default: Date.now
   }
-}, { versionKey: false });
+}, { 
+  versionKey: false,
+  toJSON: { virtuals: true }, 
+  toObject: { virtuals: true } 
+});
+
+
+productoSchema.virtual('imagenPrincipal').get(function() {
+  return this.imagenes.length > 0 ? this.imagenes[0] : null;
+});
 
 export default mongoose.model('Producto', productoSchema);
