@@ -5,7 +5,8 @@
   "type": "module",
   "main": "app.js",
   "scripts": {
-    "test": "start"
+    "test": "start",
+    "dev": "node --watch app.js"
   },
   "repository": {
     "type": "git",
@@ -22,7 +23,7 @@
     "comunicacion",
     "liderazgo"
   ],
-  "author": "",
+  "author": "ccl",
   "license": "ISC",
   "bugs": {
     "url": "https://github.com/lauramirez18/BackMartplaceCCL/issues"
