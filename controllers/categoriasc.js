@@ -8,6 +8,7 @@
         sistemaOperativo: Joi.string().required(),
         almacenamiento: Joi.string().required(),
         marcaProcesador: Joi.string().required(),
+        ram: Joi.string().required(),
         tipoAlmacenamiento: Joi.string(),
         modeloProcesador: Joi.string(),
         marcaGrafica: Joi.string(),
@@ -17,6 +18,7 @@
     // 2. PC Escritorio (Ya existía)
     pcEscritorio: Joi.object({
         referencia: Joi.string().required(),
+        ram: Joi.string().required(),
         sistemaOperativo: Joi.string().required(),
         almacenamiento: Joi.string().required(),
         tipoGabinete: Joi.string().required(),
