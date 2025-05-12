@@ -16,7 +16,6 @@ dotenv.config();
 
 const app = express();
 
-// Configuración mejorada de CORS
 const corsOptions = {
   origin: [
     'http://localhost:5173', 
