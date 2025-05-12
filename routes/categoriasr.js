@@ -10,30 +10,18 @@ import {
 const router = Router();
 
 
+router.post('/', createCategoria);
 
 
-router.post('/', 
-  createCategoria
-);
+router.get('/', getCategorias);
 
 
-router.get('/', 
-  getCategorias
-);
+router.get('/:codigo/especificaciones', getEspecificacionesByCategoria);
 
 
-router.get('/:codigo/especificaciones', 
-  getEspecificacionesByCategoria
-);
+router.put('/:id', updateCategoria);
 
 
-router.put('/:id', 
-  updateCategoria
-);
-
-
-router.put('/estado/:id', 
-  toggleCategoriaState
-);
+router.put('/estado/:id', toggleCategoriaState);
 
 export default router;
