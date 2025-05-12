@@ -23,7 +23,6 @@ router.post('/',
 // Obtener productos con filtros
 router.get('/', getProductos);
 
-// Obtener un producto específico
 router.get('/:id', getProductoById);
 
 // Actualizar producto
