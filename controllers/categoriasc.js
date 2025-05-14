@@ -135,7 +135,6 @@ export const getCategorias = async (req, res) => {
 };
 
 // Obtener especificaciones de categoría
-// Obtener especificaciones de categoría mejorado
 export const getEspecificacionesByCategoria = async (req, res) => {
   const { codigo } = req.params;
 
@@ -143,22 +142,8 @@ export const getEspecificacionesByCategoria = async (req, res) => {
     return res.status(404).json({ error: "Categoría no encontrada" });
   }
 
-  // Obtener los campos requeridos y opcionales
-  const schema = especificacionesCategorias[codigo].describe();
-  const requiredFields = Object.keys(schema.keys).filter(
-    key => schema.keys[key].flags?.presence === 'required'
-  );
-  const optionalFields = Object.keys(schema.keys).filter(
-    key => schema.keys[key].flags?.presence !== 'required'
-  );
-
   res.status(200).json({
-    camposRequeridos: requiredFields,
-    camposOpcionales: optionalFields,
-    descripciones: Object.entries(schema.keys).reduce((acc, [key, value]) => {
-      acc[key] = value.flags?.description || '';
-      return acc;
-    }, {})
+    campos: Object.keys(especificacionesCategorias[codigo].describe().keys)
   });
 };
 

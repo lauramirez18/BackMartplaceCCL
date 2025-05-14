@@ -322,47 +322,40 @@ export const getAvailableFilters = async (req, res) => {
       return res.status(404).json({ error: "Categoría no encontrada" });
     }
 
-    // Obtener las especificaciones esperadas para esta categoría
-    const especificaciones = especificacionesCategorias[categoria.codigo];
-    if (!especificaciones) {
-      return res.status(400).json({ error: "Categoría no tiene especificaciones definidas" });
-    }
-
-    // Obtener los productos de esta categoría
+    // Obtener todos los productos de esta categoría
     const productos = await Producto.find({ 
       category: categoryId,
       state: '1'
     });
 
-    // Preparar filtros basados en las especificaciones de la categoría
+    // Extraer todas las especificaciones únicas
     const filters = {};
-    const expectedFields = Object.keys(especificaciones.describe().keys);
+    
+    productos.forEach(producto => {
+      if (producto.especificaciones) {
+        Object.keys(producto.especificaciones).forEach(key => {
+          if (!filters[key]) filters[key] = new Set();
+          if (producto.especificaciones[key]) {
+            filters[key].add(producto.especificaciones[key]);
+          }
+        });
+      }
+    });
 
-    expectedFields.forEach(field => {
-      const valoresUnicos = new Set();
-      
-      productos.forEach(producto => {
-        if (producto.especificaciones && producto.especificaciones[field]) {
-          valoresUnicos.add(producto.especificaciones[field]);
-        }
-      });
-
-      if (valoresUnicos.size > 0) {
-        filters[field] = Array.from(valoresUnicos).map(value => ({
+    // Convertir sets a arrays y formatear para el frontend
+    const formattedFilters = {};
+    Object.keys(filters).forEach(key => {
+      if (filters[key].size > 0) {
+        formattedFilters[key] = Array.from(filters[key]).map(value => ({
           label: value,
-          value: value,
-          count: productos.filter(p => 
-            p.especificaciones && 
-            p.especificaciones[field] === value
-          ).length
-        })).sort((a, b) => b.count - a.count);
+          value: value
+        }));
       }
     });
 
     res.status(200).json({
       categoria: categoria.name,
-      codigo: categoria.codigo,
-      filters
+      filters: formattedFilters
     });
 
   } catch (error) {
