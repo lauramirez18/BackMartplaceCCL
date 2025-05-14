@@ -6,7 +6,9 @@ import {
   updateProducto,
   toggleProductoState,
   getFiltrosAlfabeticos,
-  getProductosPorLetra
+  getProductosPorLetra,
+  getAvailableFilters,
+  getPriceRange
 } from '../controllers/productosc.js';
 import upload from '../middleware/upploads.js';
 import { cleanUploads } from '../middleware/upploads.js';
@@ -19,6 +21,8 @@ router.post('/',
   cleanUploads,
   createProducto
 );
+router.get('/filtros-disponibles/:categoryId', getAvailableFilters);
+router.get('/rango-precios/:categoryId', getPriceRange);
 
 // Obtener productos con filtros
 router.get('/', getProductos);

@@ -33,6 +33,8 @@ export const createProducto = async (req, res) => {
       const results = await uploadImages(req.files);
       imagenes = results.map(result => result.secure_url);
     }
+    const productData = req.body;
+    productData.imagenes = imagenes;
 
     // 4. Crear producto
     const producto = new Producto({
@@ -310,7 +312,97 @@ export const getFiltrosAlfabeticos = async (req, res) => {
     });
   }
 };
+// Obtener filtros disponibles para una categoría
+export const getAvailableFilters = async (req, res) => {
+  try {
+    const { categoryId } = req.params;
+    
+    const categoria = await Categoria.findById(categoryId);
+    if (!categoria) {
+      return res.status(404).json({ error: "Categoría no encontrada" });
+    }
 
+    // Obtener las especificaciones esperadas para esta categoría
+    const especificaciones = especificacionesCategorias[categoria.codigo];
+    if (!especificaciones) {
+      return res.status(400).json({ error: "Categoría no tiene especificaciones definidas" });
+    }
+
+    // Obtener los productos de esta categoría
+    const productos = await Producto.find({ 
+      category: categoryId,
+      state: '1'
+    });
+
+    // Preparar filtros basados en las especificaciones de la categoría
+    const filters = {};
+    const expectedFields = Object.keys(especificaciones.describe().keys);
+
+    expectedFields.forEach(field => {
+      const valoresUnicos = new Set();
+      
+      productos.forEach(producto => {
+        if (producto.especificaciones && producto.especificaciones[field]) {
+          valoresUnicos.add(producto.especificaciones[field]);
+        }
+      });
+
+      if (valoresUnicos.size > 0) {
+        filters[field] = Array.from(valoresUnicos).map(value => ({
+          label: value,
+          value: value,
+          count: productos.filter(p => 
+            p.especificaciones && 
+            p.especificaciones[field] === value
+          ).length
+        })).sort((a, b) => b.count - a.count);
+      }
+    });
+
+    res.status(200).json({
+      categoria: categoria.name,
+      codigo: categoria.codigo,
+      filters
+    });
+
+  } catch (error) {
+    res.status(500).json({ 
+      error: "Error al obtener filtros",
+      details: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
+  }
+};
+
+// Obtener rango de precios para una categoría
+export const getPriceRange = async (req, res) => {
+  try {
+    const { categoryId } = req.params;
+    
+    const result = await Producto.aggregate([
+      { $match: { category: mongoose.Types.ObjectId(categoryId), state: '1' } },
+      { $group: {
+          _id: null,
+          min: { $min: "$precio" },
+          max: { $max: "$precio" }
+      }}
+    ]);
+
+    if (result.length === 0) {
+      return res.status(200).json({ min: 0, max: 1000000 });
+    }
+
+    res.status(200).json({
+      min: Math.floor(result[0].min / 10000) * 10000, // Redondear hacia abajo
+      max: Math.ceil(result[0].max / 10000) * 10000  // Redondear hacia arriba
+    });
+
+  } catch (error) {
+    res.status(500).json({ 
+      error: "Error al obtener rango de precios",
+      details: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
+  }
+};
 export default {
   createProducto,
   getProductos,
@@ -318,5 +410,7 @@ export default {
   getProductosPorLetra,
   updateProducto,
   getFiltrosAlfabeticos,
-  toggleProductoState
+  toggleProductoState,
+  getPriceRange,
+  getAvailableFilters, 
 };
