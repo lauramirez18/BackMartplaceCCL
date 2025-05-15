@@ -10,6 +10,8 @@ export const especificacionesCategorias = {
     marcaProcesador: Joi.string().required(),
     tipoAlmacenamiento: Joi.string(),
     ram: Joi.string().required(),
+    grafica: Joi.string().valid('si', 'no'),
+    modeloGrafica: Joi.string(),
     modeloProcesador: Joi.string(),
     marcaGrafica: Joi.string(),
     bateria: Joi.string()
