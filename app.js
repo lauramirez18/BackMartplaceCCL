@@ -50,6 +50,8 @@ app.use('/api/usuarios', usuarios);
 app.use('/api', testRoutes);
 app.use('/api/upload', router);
 app.use('/api/reseñas', reseñas); 
+app.use(express.static('public'));
+
 
 // Manejo de errores global
 app.use((err, req, res, next) => {
