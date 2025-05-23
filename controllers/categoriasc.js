@@ -70,44 +70,82 @@ export const getCategoriaById = async (req, res) => {
 };
 
 // Obtener especificaciones de categoría
+
 export const getEspecificacionesByCategoria = async (req, res) => {
   const { codigo } = req.params;
+  const schemaCategoria = especificacionesCategorias[codigo];
 
-  if (!especificacionesCategorias[codigo]) {
-    return res.status(404).json({ error: "Categoría no encontrada" });
+  if (!schemaCategoria) {
+    return res.status(404).json({ error: "Categoría no encontrada o sin especificaciones definidas" });
   }
 
-  // Extraer información de los campos desde la definición de Joi
-  const camposJoi = especificacionesCategorias[codigo].describe().keys;
-  const campos = [];
-  
-  for (const [key, schema] of Object.entries(camposJoi)) {
-    const campo = {
-      nombre: key,
-      requerido: schema.flags?.presence === 'required',
-      tipo: schema.type
-    };
-    
-    // Si tiene valores válidos definidos, incluirlos
-    if (schema.valids && schema.valids.length > 0) {
-      campo.valores = schema.valids;
-    }
-    
-    // Si tiene un patrón definido, incluirlo
-    if (schema.rules) {
-      const patternRule = schema.rules.find(rule => rule.name === 'pattern');
-      if (patternRule) {
-        campo.patron = patternRule.args.regex.toString();
+  try {
+    const descripcionCompleta = schemaCategoria.describe();
+    const camposDetallados = [];
+
+    for (const [key, fieldDesc] of Object.entries(descripcionCompleta.keys || {})) {
+      const detalleCampo = {
+        key: key,
+        label: key.replace(/([A-Z])/g, ' $1').replace(/^./, s => s.toUpperCase()).trim(), // Helper for label
+        required: fieldDesc.flags?.presence === 'required',
+        type: fieldDesc.type, // 'string', 'number', 'boolean', 'array'
+        options: [],
+        rules: {} // For min, max, pattern
+      };
+
+      // Check for .valid() options for selects/multiselects
+      if (fieldDesc.allow && Array.isArray(fieldDesc.allow)) {
+        const validValues = fieldDesc.allow.filter(v => v !== null && v !== undefined);
+        if (validValues.length > 0) {
+          // Differentiate single select from boolean
+          if (fieldDesc.type === 'string' || fieldDesc.type === 'number') { // Could be other primitive types too
+             detalleCampo.uiType = 'select'; // Custom hint for UI
+             detalleCampo.options = validValues.map(val => ({ label: String(val), value: val }));
+          }
+        }
       }
-    }
-    
-    campos.push(campo);
-  }
+      
+      if (fieldDesc.type === 'boolean') {
+        detalleCampo.uiType = 'boolean';
+      } else if (fieldDesc.type === 'number') {
+        detalleCampo.uiType = 'number';
+        const minRule = fieldDesc.rules?.find(r => r.name === 'min');
+        if (minRule) detalleCampo.rules.min = minRule.args.limit;
+        const maxRule = fieldDesc.rules?.find(r => r.name === 'max');
+        if (maxRule) detalleCampo.rules.max = maxRule.args.limit;
+      } else if (fieldDesc.type === 'array' && fieldDesc.items && fieldDesc.items.length > 0) {
+        const itemSchema = fieldDesc.items[0];
+        if (itemSchema.allow && Array.isArray(itemSchema.allow)) {
+           const itemValidValues = itemSchema.allow.filter(v => v !== null && v !== undefined);
+           if (itemValidValues.length > 0) {
+             detalleCampo.uiType = 'multiselect';
+             detalleCampo.options = itemValidValues.map(val => ({ label: String(val), value: val }));
+           }
+        } else {
+          detalleCampo.uiType = 'array_generic'; // e.g., render as textarea for JSON array
+        }
+      } else if (fieldDesc.type === 'string') {
+         // Default uiType for string is 'text', unless already set to 'select'
+         if(!detalleCampo.uiType) detalleCampo.uiType = 'text';
+         const patternRule = fieldDesc.rules?.find(r => r.name === 'pattern');
+         if (patternRule && patternRule.args?.regex) {
+           detalleCampo.rules.pattern = patternRule.args.regex.toString(); // Send regex as string
+         }
+      }
+      if(!detalleCampo.uiType) detalleCampo.uiType = 'text'; // Default
 
-  res.status(200).json({
-    categoria: codigo,
-    campos: campos
-  });
+      camposDetallados.push(detalleCampo);
+    }
+
+    res.status(200).json({
+      categoria: codigo,
+      especificaciones: camposDetallados
+    });
+
+  } catch (error) {
+    console.error(`Error describiendo especificaciones para ${codigo}:`, error);
+    res.status(500).json({ error: "Error al procesar especificaciones de la categoría" });
+  }
 };
 
 // Actualizar categoría (solo metadata, no especificaciones)

@@ -12,7 +12,7 @@ const router = Router();
 
 router.post('/', createCategoria);
 router.get('/', getCategorias);
-router.get('/:id', getCategoriaById); // Add this new route
+router.get('/:id', getCategoriaById); 
 router.get('/:codigo/especificaciones', getEspecificacionesByCategoria);
 router.put('/:id', updateCategoria);
 router.put('/estado/:id', toggleCategoriaState);

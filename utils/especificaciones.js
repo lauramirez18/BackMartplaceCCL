@@ -11,7 +11,7 @@ export const especificacionesCategorias = {
     tipoAlmacenamiento: Joi.string(),
     ram: Joi.string().required(),
     modeloProcesador: Joi.string(),
-    referenciagrafica: Joi.string(),
+    marcaGrafica: Joi.string(),
     bateria: Joi.string()
   }),
 
@@ -27,7 +27,6 @@ export const especificacionesCategorias = {
 
   celulares: Joi.object({
     modelo: Joi.string().required(),
-    marca: Joi.string().required(),
     sistemaOperativo: Joi.string().required().valid('Android', 'iOS', 'harmonyOS'),
     almacenamiento: Joi.string().required(),
     ram: Joi.string().required(),

@@ -1,3 +1,4 @@
+
 import mongoose from 'mongoose';
 import Producto from '../models/productos.js';
 import Categoria from '../models/categorias.js';
@@ -7,78 +8,101 @@ import { especificacionesCategorias } from '../utils/especificaciones.js';
 
 export const createProducto = async (req, res) => {
   try {
-    const { category, subcategory } = req.body;
-
-    // 1. Obtener el código de la categoría (enviar código desde el frontend)
+    const { category, subcategory, especificaciones, ...productData } = req.body;
+    if (!mongoose.Types.ObjectId.isValid(category) || !mongoose.Types.ObjectId.isValid(subcategory)) {
+      return res.status(400).json({ message: 'IDs de categoría o subcategoría inválidos.' });
+    }
     const categoria = await Categoria.findById(category);
     if (!categoria) {
-      return res.status(400).json({ error: 'La categoría no existe' });
+      return res.status(400).json({ message: 'La categoría especificada no existe.' });
     }
-
-    // 2. Validar que la subcategoría pertenezca a la categoría (por código)
     const subcatValida = await Subcategoria.findOne({
       _id: subcategory,
-      categoriaPadre: categoria.codigo  // Compara con el código, no con el ID
+      categoriaPadre: categoria.codigo 
     });
 
     if (!subcatValida) {
-      return res.status(400).json({ 
-        error: 'Subcategoría no válida para esta categoría',
-        details: `La subcategoría no está asociada a ${categoria.name} (${categoria.codigo})`
+      return res.status(400).json({
+        message: 'Subcategoría no válida para esta categoría.',
+        details: `La subcategoría no está asociada a ${categoria.name} (${categoria.codigo}).`
       });
     }
 
-    // 3. Subir imágenes (tu código actual está correcto)
+  
+    let processedEspecificaciones = {};
+    if (especificaciones) { 
+      if (typeof especificaciones === 'string') {
+        try {
+          processedEspecificaciones = JSON.parse(especificaciones);
+        } catch (e) {
+          console.error("Error al parsear el JSON de especificaciones en createProducto:", e);
+          return res.status(400).json({ message: "Formato de especificaciones inválido. Debe ser un objeto JSON o una cadena JSON válida." });
+        }
+      } else if (typeof especificaciones === 'object') {
+        
+        processedEspecificaciones = especificaciones;
+      }
+
+    } else {
+     
+        processedEspecificaciones = {};
+    }
+
     let imagenes = [];
     if (req.files && req.files.length > 0) {
       const results = await uploadImages(req.files);
       imagenes = results.map(result => result.secure_url);
     }
-    const productData = req.body;
-    productData.imagenes = imagenes;
 
-    // 4. Crear producto
     const producto = new Producto({
-      ...productData,
+      ...productData, 
       category,
       subcategory,
       imagenes,
-      state: '1'
+      especificaciones: processedEspecificaciones, 
+      state: '1' 
     });
+
+    // 8. Guardar el producto en la base de datos
     await producto.save();
 
-    // 5. Poblar datos para la respuesta
+   
     const productoPopulado = await Producto.findById(producto._id)
-    .populate('category', 'name codigo')
-    .populate('subcategory', 'name');
+      .populate('category', 'name codigo') 
+      .populate('subcategory', 'name');   
 
+   
     res.status(201).json(productoPopulado);
 
   } catch (error) {
-    // Mejora el manejo de errores
+   
     console.error('Error en createProducto:', error);
-    res.status(500).json({ 
-      error: 'Error interno del servidor',
+    
+    if (error.name === 'ValidationError') {
+      const messages = Object.values(error.errors).map(err => err.message);
+      return res.status(400).json({ message: 'Error de validación al crear producto', errors: messages });
+    }
+    res.status(500).json({
+      message: 'Error interno del servidor al crear el producto.',
       details: process.env.NODE_ENV === 'development' ? error.message : undefined
     });
   }
 };
-
 export const getProductos = async (req, res) => {
   try {
-    const { 
-      category, 
-      subcategory, 
-      minPrice, 
-      maxPrice, 
-      search, 
-      sort, 
-      page = 1, 
-      limit = 10, 
-      format = 'detailed', 
+    const {
+      category,
+      subcategory,
+      minPrice,
+      maxPrice,
+      search,
+      sort,
+      page = 1,
+      limit = 10,
+      format = 'detailed',
       ...filters 
     } = req.query;
-    
+
     const filtro = { state: '1' };
 
     if (category) filtro.category = category;
@@ -93,17 +117,19 @@ export const getProductos = async (req, res) => {
       filtro.$or = [
         { nombre: { $regex: search, $options: 'i' } },
         { descripcion: { $regex: search, $options: 'i' } },
-        { 'especificaciones.modelo': { $regex: search, $options: 'i' } }
+       
+        { 'detalles.modelo': { $regex: search, $options: 'i' } }
       ];
     }
 
     if (Object.keys(filters).length > 0) {
       for (const key in filters) {
         if (filters[key]) {
+        
           if (Array.isArray(filters[key])) {
-            filtro[`especificaciones.${key}`] = { $in: filters[key] };
+            filtro[`detalles.${key}`] = { $in: filters[key] };
           } else {
-            filtro[`especificaciones.${key}`] = filters[key];
+            filtro[`detalles.${key}`] = filters[key];
           }
         }
       }
@@ -120,20 +146,20 @@ export const getProductos = async (req, res) => {
     const sortOption = sortOptions[sort] || { createdAt: -1 };
 
     let query = Producto.find(filtro);
-    
+
     query = query.populate('category', 'name codigo')
-                .populate('subcategory', 'name')
-                .sort(sortOption);
-    
+      .populate('subcategory', 'name')
+      .sort(sortOption);
+
     if (format === 'detailed') {
       const skip = (page - 1) * limit;
       const total = await Producto.countDocuments(filtro);
       const totalPages = Math.ceil(total / limit);
-      
+
       query = query.skip(skip).limit(Number(limit));
-      
+
       const productos = await query;
-      
+
       return res.status(200).json({
         productos,
         pagination: {
@@ -148,9 +174,9 @@ export const getProductos = async (req, res) => {
       return res.status(200).json(productos);
     }
   } catch (error) {
-    return res.status(500).json({ 
-      error: 'Error al obtener productos', 
-      details: process.env.NODE_ENV === 'development' ? error.message : undefined 
+    return res.status(500).json({
+      error: 'Error al obtener productos',
+      details: process.env.NODE_ENV === 'development' ? error.message : undefined
     });
   }
 };
@@ -173,14 +199,14 @@ export const getProductoById = async (req, res) => {
 
 export const updateProducto = async (req, res) => {
   try {
-    const { imagenesEliminadas } = req.body;
+
+    const { imagenesEliminadas, detalles, ...updatedFields } = req.body;
     const producto = await Producto.findById(req.params.id);
 
     if (!producto) {
       return res.status(404).json({ error: 'Producto no encontrado' });
     }
 
-    // Eliminar imágenes marcadas
     if (imagenesEliminadas && imagenesEliminadas.length > 0) {
       const publicIds = imagenesEliminadas.map(url => {
         const parts = url.split('/');
@@ -191,17 +217,31 @@ export const updateProducto = async (req, res) => {
       producto.imagenes = producto.imagenes.filter(img => !imagenesEliminadas.includes(img));
     }
 
-    // Añadir nuevas imágenes
     if (req.files && req.files.length > 0) {
       const results = await uploadImages(req.files);
       const nuevasUrls = results.map(result => result.secure_url);
       producto.imagenes = [...producto.imagenes, ...nuevasUrls];
     }
+    if (detalles) {
+      let processedDetalles = {};
+      if (typeof detalles === 'string') {
+        try {
+          processedDetalles = JSON.parse(detalles);
+        } catch (e) {
+          console.error("Error al parsear el JSON de detalles en updateProducto:", e);
+          return res.status(400).json({ message: "Formato de detalles inválido. Debe ser un objeto JSON o una cadena JSON válida." });
+        }
+      } else if (typeof detalles === 'object') {
+        processedDetalles = detalles;
+      }
+      producto.detalles = processedDetalles; 
+    }
 
     // Actualizar otros campos
-    Object.keys(req.body).forEach(key => {
-      if (key !== 'imagenesEliminadas' && key !== 'imagenes') {
-        producto[key] = req.body[key];
+    Object.keys(updatedFields).forEach(key => {
+   
+      if (key !== 'imagenesEliminadas' && key !== 'imagenes' && key !== 'detalles') {
+        producto[key] = updatedFields[key];
       }
     });
 
@@ -232,7 +272,7 @@ export const toggleProductoState = async (req, res) => {
 export const getProductosPorLetra = async (req, res) => {
   try {
     const { category, campo, letra } = req.params;
-    
+
     if (!/^[A-Za-z]$/.test(letra)) {
       return res.status(400).json({ error: 'La letra debe ser un único carácter A-Z' });
     }
@@ -244,11 +284,12 @@ export const getProductosPorLetra = async (req, res) => {
 
     const productos = await Producto.find({
       category: categoria._id,
-      [`especificaciones.${campo}`]: { $regex: `^${letra}`, $options: 'i' },
+      
+      [`detalles.${campo}`]: { $regex: `^${letra}`, $options: 'i' },
       state: '1'
     })
-    .select('nombre precio imagenes especificaciones')
-    .sort({ nombre: 1 });
+      .select('nombre precio imagenes detalles') 
+      .sort({ nombre: 1 });
 
     res.status(200).json({
       categoria: categoria.name,
@@ -259,7 +300,7 @@ export const getProductosPorLetra = async (req, res) => {
     });
 
   } catch (error) {
-    res.status(500).json({ 
+    res.status(500).json({
       error: 'Error al filtrar productos por letra',
       details: process.env.NODE_ENV === 'development' ? error.message : undefined
     });
@@ -269,28 +310,29 @@ export const getProductosPorLetra = async (req, res) => {
 export const getFiltrosAlfabeticos = async (req, res) => {
   try {
     const { category } = req.params;
-    
+
     const categoria = await Categoria.findById(category);
     if (!categoria) {
       return res.status(404).json({ error: 'Categoría no encontrada' });
     }
 
-    // Campos disponibles para filtrado alfabético
-    const camposFiltrables = ['marca', 'modelo'];
+   
+    const camposFiltrables = ['marca', 'modelo']; 
 
-    // Obtener letras disponibles para cada campo
+   
     const filtros = {};
-    
+
     for (const campo of camposFiltrables) {
       const letras = await Producto.aggregate([
-        { $match: { category: categoria._id, state: '1' } },
-        { $project: { 
-          letra: { $substr: [{ $toUpper: `$especificaciones.${campo}` }, 0, 1] } 
+   
+        { $match: { category: categoria._id, state: '1', [`detalles.${campo}`]: { $exists: true, $ne: null, $ne: '' } } },
+        { $project: {
+          letra: { $substr: [{ $toUpper: `$detalles.${campo}` }, 0, 1] } 
         }},
         { $group: { _id: "$letra" } },
         { $sort: { _id: 1 } }
       ]);
-      
+
       filtros[campo] = letras.map(l => l._id).filter(l => l);
     }
 
@@ -300,133 +342,98 @@ export const getFiltrosAlfabeticos = async (req, res) => {
     });
 
   } catch (error) {
-    res.status(500).json({ 
+    res.status(500).json({
       error: 'Error al obtener filtros alfabéticos',
       details: process.env.NODE_ENV === 'development' ? error.message : undefined
     });
   }
 };
 
-// Obtener filtros disponibles para una categoría
+
 export const getAvailableFilters = async (req, res) => {
   try {
-    const { categoryId } = req.params;
-    
-    // Validar que el ID tenga un formato válido
-    if (!mongoose.Types.ObjectId.isValid(categoryId)) {
-      return res.status(400).json({ error: "ID de categoría inválido" });
-    }
+      const { categoryId } = req.params;
 
-    // Buscar la categoría por ID
-    const categoria = await Categoria.findById(categoryId);
-    if (!categoria) {
-      return res.status(404).json({ error: "Categoría no encontrada" });
-    }
-
-    // Obtener el código de la categoría
-    const codigoCategoria = categoria.codigo;
-    console.log(`Código de categoría: ${codigoCategoria}`);
-    
-    // Verificar si tenemos especificaciones predefinidas para esta categoría
-    if (!especificacionesCategorias[codigoCategoria]) {
-      console.log(`No hay especificaciones para el código: ${codigoCategoria}`);
-      return res.status(200).json({
-        categoria: categoria.name,
-        filters: {},
-        message: `No hay especificaciones predefinidas para la categoría ${categoria.name}`
-      });
-    }
-
-    // Convertir el ID de string a ObjectId para la consulta
-    const categoryObjectId = new mongoose.Types.ObjectId(categoryId);
-
-    // Obtener todos los productos de esta categoría
-    const productos = await Producto.find({ 
-      category: categoryObjectId,
-      state: '1'
-    });
-
-    console.log(`Encontrados ${productos.length} productos para la categoría ${categoria.name}`);
-
-    // Extraer filtros de las especificaciones predefinidas
-    const especificacionesPredef = especificacionesCategorias[codigoCategoria].describe().keys;
-    const filtrosPredefinidos = {};
-    
-    for (const key in especificacionesPredef) {
-      // Verificar si el campo tiene valores válidos predefinidos
-      if (especificacionesPredef[key].valids && especificacionesPredef[key].valids.length > 0) {
-        filtrosPredefinidos[key] = especificacionesPredef[key].valids.map(value => ({
-          label: value,
-          value: value
-        }));
-      } else {
-        filtrosPredefinidos[key] = []; // Inicializar como array vacío para ser rellenado con valores reales
+      if (!mongoose.Types.ObjectId.isValid(categoryId)) {
+          return res.status(400).json({ message: 'ID de categoría inválido' });
       }
-    }
 
-    // Complementar con valores reales de los productos
-    const filtrosReales = {};
-    
-    productos.forEach(producto => {
-      if (producto.especificaciones && typeof producto.especificaciones === 'object') {
-        Object.keys(producto.especificaciones).forEach(key => {
-          if (!filtrosReales[key]) filtrosReales[key] = new Set();
+      const categoryObjectId = new mongoose.Types.ObjectId(categoryId);
+
+   
+      const categoria = await Categoria.findById(categoryObjectId);
+      if (!categoria) {
+          return res.status(404).json({ message: 'Categoría no encontrada' });
+      }
+
+      console.log(`[Backend] Fetched category code: "${categoria.codigo}"`);
+
+
+      const schema = especificacionesCategorias[categoria.codigo]; 
+      if (!schema) {
+          console.log(`[Backend] No schema found for category code: ${categoria.codigo}`);
           
-          const value = producto.especificaciones[key];
-          if (value !== null && value !== undefined && value !== '') {
-            filtrosReales[key].add(value);
-          }
-        });
+          const emptyFilters = {
+              categoria: categoria.name,
+              filters: {}
+          };
+        
+          const defaultKeys = ['modelo', 'marca', 'sistemaOperativo', 'almacenamiento', 'ram', 'camaraPrincipal', 'bateria'];
+          defaultKeys.forEach(key => emptyFilters.filters[key] = []);
+          return res.status(200).json(emptyFilters);
       }
-    });
 
-    // Convertir sets a arrays y formatear
-    const filtrosFinales = { ...filtrosPredefinidos };
-    
-    for (const key in filtrosReales) {
-      if (filtrosReales[key].size > 0) {
-        // Si ya existe el filtro predefinido, añadimos valores que no estén ya
-        if (filtrosFinales[key]) {
-          const valoresExistentes = new Set(filtrosFinales[key].map(item => item.value));
-          filtrosReales[key].forEach(value => {
-            if (!valoresExistentes.has(value)) {
-              filtrosFinales[key].push({
-                label: value,
-                value: value
-              });
-            }
-          });
-        } else {
-          // Si no existe, lo creamos
-          filtrosFinales[key] = Array.from(filtrosReales[key]).map(value => ({
-            label: value,
-            value: value
+
+      const specKeys = Object.keys(schema.describe().keys); 
+
+      console.log(`[Backend] Schema keys found: ${specKeys}`);
+
+      const filters = {};
+
+      for (const key of specKeys) {
+          console.log(`[Backend] Aggregating for key: ${key}`);
+          const uniqueValues = await Producto.aggregate([
+              {
+                  $match: {
+                      category: categoryObjectId,
+                      state: '1',
+                      [`especificaciones.${key}`]: { $exists: true, $ne: null, $ne: '', $ne: {} } // <- Verificación adicional
+                  }
+              },
+              {
+                  $unwind: `$especificaciones.${key}` // Desglosa si el valor es un array
+              },
+              {
+                  $group: {
+                      _id: `$especificaciones.${key}`
+                  }
+              },
+              {
+                  $sort: { _id: 1 }
+              }
+          ]);
+
+          const values = uniqueValues.map(item => ({
+              label: item._id,
+              value: item._id
           }));
-        }
+          filters[key] = values;
+          console.log(`[Backend] Unique values for ${key}:`, values); // <-- AÑADE ESTE LOG
       }
-    }
 
-    // Ordenar los valores de cada filtro alfabéticamente
-    for (const key in filtrosFinales) {
-      filtrosFinales[key].sort((a, b) => a.label.localeCompare(b.label));
-    }
+      console.log(`[Backend] Final filters object:`, filters);
 
-    // Verificar si hay filtros
-    if (Object.keys(filtrosFinales).length === 0) {
-      console.log(`No se encontraron filtros para la categoría ${categoria.name}`);
-    }
-
-    res.status(200).json({
-      categoria: categoria.name,
-      filters: filtrosFinales
-    });
+      res.status(200).json({
+          categoria: categoria.name,
+          filters: filters
+      });
 
   } catch (error) {
-    console.error('Error en getAvailableFilters:', error);
-    res.status(500).json({ 
-      error: "Error al obtener filtros",
-      details: process.env.NODE_ENV === 'development' ? error.message : undefined
-    });
+      console.error('Error fetching available filters:', error);
+      res.status(500).json({
+          message: 'Error interno del servidor al obtener filtros disponibles.',
+          details: process.env.NODE_ENV === 'development' ? error.message : undefined
+      });
   }
 };
 
@@ -434,13 +441,13 @@ export const getAvailableFilters = async (req, res) => {
 export const getPriceRange = async (req, res) => {
   try {
     const { categoryId } = req.params;
-    
+
     if (!mongoose.Types.ObjectId.isValid(categoryId)) {
       return res.status(400).json({ error: "ID de categoría inválido" });
     }
-    
+
     const categoryObjectId = new mongoose.Types.ObjectId(categoryId);
-    
+
     const result = await Producto.aggregate([
       { $match: { category: categoryObjectId, state: '1' } },
       { $group: {
@@ -455,12 +462,12 @@ export const getPriceRange = async (req, res) => {
     }
 
     res.status(200).json({
-      min: Math.floor(result[0].min / 10000) * 10000, // Redondear hacia abajo
-      max: Math.ceil(result[0].max / 10000) * 10000  // Redondear hacia arriba
+      min: Math.floor(result[0].min / 10000) * 10000,
+      max: Math.ceil(result[0].max / 10000) * 10000
     });
 
   } catch (error) {
-    res.status(500).json({ 
+    res.status(500).json({
       error: "Error al obtener rango de precios",
       details: process.env.NODE_ENV === 'development' ? error.message : undefined
     });
@@ -476,5 +483,5 @@ export default {
   getFiltrosAlfabeticos,
   toggleProductoState,
   getPriceRange,
-  getAvailableFilters, 
+  getAvailableFilters,
 };
