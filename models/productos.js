@@ -1,3 +1,5 @@
+// models/productos.js
+
 import mongoose from 'mongoose';
 
 const productoSchema = new mongoose.Schema({
@@ -15,11 +17,12 @@ const productoSchema = new mongoose.Schema({
     required: true,
     min: 0
   },
-  marca: {
+  marca: { 
     type: String,
-    required: true
+    required: true,
+    logo : { type: String }
   },
-  imagenes: [{  
+  imagenes: [{
     type: String,
     required: true
   }],
@@ -33,9 +36,10 @@ const productoSchema = new mongoose.Schema({
     ref: 'Subcategoria',
     required: true
   },
-  detalles: {
+
+  especificaciones: {
     type: Object,
-    required: true
+    required: true 
   },
   stock: {
     type: Number,
@@ -51,10 +55,10 @@ const productoSchema = new mongoose.Schema({
     type: Date,
     default: Date.now
   }
-}, { 
+}, {
   versionKey: false,
-  toJSON: { virtuals: true }, 
-  toObject: { virtuals: true } 
+  toJSON: { virtuals: true },
+  toObject: { virtuals: true }
 });
 
 
