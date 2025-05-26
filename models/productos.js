@@ -17,10 +17,10 @@ const productoSchema = new mongoose.Schema({
     required: true,
     min: 0
   },
-  marca: { 
+  marca: {
     type: String,
     required: true,
-    logo : { type: String }
+    logo: { type: String }
   },
   imagenes: [{
     type: String,
@@ -39,7 +39,7 @@ const productoSchema = new mongoose.Schema({
 
   especificaciones: {
     type: Object,
-    required: true 
+    required: true
   },
   stock: {
     type: Number,
@@ -62,7 +62,7 @@ const productoSchema = new mongoose.Schema({
 });
 
 
-productoSchema.virtual('imagenPrincipal').get(function() {
+productoSchema.virtual('imagenPrincipal').get(function () {
   return this.imagenes.length > 0 ? this.imagenes[0] : null;
 });
 
