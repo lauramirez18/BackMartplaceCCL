@@ -7,7 +7,7 @@ const router = express.Router();
 router.get('/test-email', async (req, res) => {
   try {
     await sendInvoiceEmail(
-      'tucorreo@gmail.com',   // <-- pon aquí TU correo de pruebas
+      'tucorreo@gmail.com',  
       'Correo de prueba',
       'Este es un correo de prueba desde tu servidor Node.js',
       null // No adjuntamos archivos por ahora

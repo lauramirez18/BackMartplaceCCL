@@ -40,13 +40,7 @@ router.get('/google/callback', async (req, res, next) => {
       refreshToken: tokens.refresh_token
     };
     
-    // 5. Aquí deberías buscar/crear el usuario en tu base de datos
-    // const dbUser = await findOrCreateUser(user);
     
-    // 6. Crear sesión o token JWT para tu aplicación
-    // const appToken = generateAppToken(dbUser);
-    
-    // 7. Redirigir al frontend con los tokens
     res.redirect(`/auth/success?token=${tokens.id_token}`);
     
   } catch (error) {

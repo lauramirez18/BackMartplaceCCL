@@ -418,7 +418,7 @@ export const getAvailableFilters = async (req, res) => {
               value: item._id
           }));
           filters[key] = values;
-          console.log(`[Backend] Unique values for ${key}:`, values); // <-- AÑADE ESTE LOG
+          console.log(`[Backend] Unique values for ${key}:`, values); 
       }
 
       console.log(`[Backend] Final filters object:`, filters);

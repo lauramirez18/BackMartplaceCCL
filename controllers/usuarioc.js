@@ -36,7 +36,8 @@ const httpUsers = {
                 return res.status(400).json({ error: 'contraseña incorrecta' })
             }
             const token = await generarJWT(user);
-            res.status(200).json({ token })
+            res
+            res.status(200).json({ token ,user: user.name })
         } catch (error) {
             console.log(error)
             return res.status(500).json({ error: 'error al autenticar usuario' })
