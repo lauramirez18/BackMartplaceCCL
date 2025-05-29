@@ -18,6 +18,10 @@ const usuarioSchema = new mongoose.Schema({
         type: String,
         required: true
     },
+      estado: { 
+        type: Boolean,
+        default: true 
+    }
 },
 {
     timestamps: true

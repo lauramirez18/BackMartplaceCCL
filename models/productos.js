@@ -18,9 +18,9 @@ const productoSchema = new mongoose.Schema({
     min: 0
   },
   marca: {
-    type: String,
-    required: true,
-    logo: { type: String }
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Marca',
+    required: true
   },
   imagenes: [{
     type: String,

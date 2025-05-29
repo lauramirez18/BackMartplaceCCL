@@ -3,15 +3,25 @@ import mongoose from 'mongoose';
 import Producto from '../models/productos.js';
 import Categoria from '../models/categorias.js';
 import Subcategoria from '../models/subcategorias.js';
+import Marca from '../models/marcas.js';
 import { uploadImages, deleteImages } from '../utils/teximage.js';
 import { especificacionesCategorias } from '../utils/especificaciones.js';
 
 export const createProducto = async (req, res) => {
   try {
-    const { category, subcategory, especificaciones, ...productData } = req.body;
-    if (!mongoose.Types.ObjectId.isValid(category) || !mongoose.Types.ObjectId.isValid(subcategory)) {
-      return res.status(400).json({ message: 'IDs de categoría o subcategoría inválidos.' });
+    const { category, subcategory, marca, especificaciones, ...productData } = req.body;
+    if (!mongoose.Types.ObjectId.isValid(category) || 
+        !mongoose.Types.ObjectId.isValid(subcategory) ||
+        !mongoose.Types.ObjectId.isValid(marca)) {
+      return res.status(400).json({ message: 'IDs de categoría, subcategoría o marca inválidos.' });
     }
+    
+    // Verificar que la marca existe
+    const marcaExiste = await Marca.findById(marca);
+    if (!marcaExiste) {
+      return res.status(400).json({ message: 'La marca especificada no existe.' });
+    }
+
     const categoria = await Categoria.findById(category);
     if (!categoria) {
       return res.status(400).json({ message: 'La categoría especificada no existe.' });
@@ -58,6 +68,7 @@ export const createProducto = async (req, res) => {
       ...productData, 
       category,
       subcategory,
+      marca,
       imagenes,
       especificaciones: processedEspecificaciones, 
       state: '1' 
@@ -69,7 +80,8 @@ export const createProducto = async (req, res) => {
    
     const productoPopulado = await Producto.findById(producto._id)
       .populate('category', 'name codigo') 
-      .populate('subcategory', 'name');   
+      .populate('subcategory', 'name')
+      .populate('marca', 'nombre logo');   
 
    
     res.status(201).json(productoPopulado);
@@ -149,6 +161,7 @@ export const getProductos = async (req, res) => {
 
     query = query.populate('category', 'name codigo')
       .populate('subcategory', 'name')
+      .populate('marca', 'nombre logo')
       .sort(sortOption);
 
     if (format === 'detailed') {
@@ -185,7 +198,8 @@ export const getProductoById = async (req, res) => {
   try {
     const producto = await Producto.findById(req.params.id)
       .populate('category', 'name')
-      .populate('subcategory', 'name');
+      .populate('subcategory', 'name')
+      .populate('marca', 'nombre logo');
 
     if (!producto) {
       return res.status(404).json({ error: 'Producto no encontrado' });

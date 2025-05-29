@@ -21,7 +21,7 @@ const categoriaSchema = new mongoose.Schema({
   name: { type: String, required: true },
   img: { type: String },
   description: { type: String, required: true },
-  state: { type: String, default: '1' }, // 1=activo, 0=inactivo
+  state: { type: String, default: '1' }, 
 }, { timestamps: true });
 
 export default mongoose.model('Categoria', categoriaSchema);
