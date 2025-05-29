@@ -11,7 +11,8 @@ import productos from './routes/productosr.js'
 import usuarios from './routes/usuariosr.js'
 import reseñas from "./routes/resenas.js";
 import subcategorias from "./routes/subcategorias.js";
-import authRoutes from "./routes/gogole.js"; 
+import authRoutes from "./routes/gogole.js";
+import marcasRoutes from './routes/marcasr.js';
 dotenv.config();
 
 const app = express();
@@ -49,7 +50,8 @@ app.use('/api/productos', productos);
 app.use('/api/usuarios', usuarios); 
 app.use('/api', testRoutes);
 app.use('/api/upload', router);
-app.use('/api/reseñas', reseñas); 
+app.use('/api/resenas', reseñas); 
+app.use('/api/marcas', marcasRoutes);
 app.use(express.static('public'));
 
 

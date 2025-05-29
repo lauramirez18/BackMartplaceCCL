@@ -6,11 +6,12 @@ import {
    
 } from '../controllers/resenas.js'
 
+import { validarJWT } from '../middleware/validar-jwt.js'
 
 const router = express.Router()
 
 // Rutas para reseñas:
-router.post('/',  crearReseña) 
+router.post('/', validarJWT, crearReseña) 
 router.get('/producto/:productoId', obtenerReseñasProducto) 
 router.delete('/:id',  eliminarReseña) 
 

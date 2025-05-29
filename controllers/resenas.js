@@ -1,35 +1,42 @@
 import Reseña from '../utils/resenas.js'
 import Producto from '../models/productos.js'
 
-// Crear una reseña
+
 export const crearReseña = async (req, res) => {
-    try {
-        const { productoId, calificacion, comentario } = req.body
-        const usuarioId = req.usuario._id // Si usas autenticación
+  try {
 
-        // Validación básica
-        if (!productoId || !calificacion) {
-            return res.status(400).json({ error: "Faltan campos obligatorios" })
-        }
-
-        const nuevaReseña = new Reseña({
-            producto: productoId,
-            usuario: usuarioId,
-            nombreUsuario: req.usuario.nombre, // Ejemplo si el usuario tiene un nombre
-            calificacion,
-            comentario: comentario || null
-        })
-
-        await nuevaReseña.save()
-
-        // Actualizar el promedio de calificaciones del producto
-        await actualizarPromedioProducto(productoId)
-
-        res.status(201).json(nuevaReseña)
-    } catch (error) {
-        res.status(500).json({ error: "Error al crear la reseña" })
+    if (!req.usuario) {
+      return res.status(401).json({ error: 'No autorizado' });
     }
-}
+
+    const { productoId, calificacion, comentario } = req.body;
+    
+
+    if (!productoId || !calificacion || !comentario) {
+      return res.status(400).json({ error: 'Faltan campos requeridos' });
+    }
+
+   
+    const nuevaReseña = new Reseña({
+      producto: productoId,
+      usuario: req.usuario.id,
+      calificacion,
+      comentario,
+      nombreUsuario: req.usuario.nombre
+    });
+
+    await nuevaReseña.save();
+    
+    res.status(201).json(nuevaReseña);
+    
+  } catch (error) {
+    console.error('Error en crearReseña:', error);
+    res.status(500).json({ 
+      error: 'Error al crear la reseña',
+      detalle: error.message // Mejorar mensaje de error
+    });
+  }
+};
 
 // Obtener reseñas de un producto
 export const obtenerReseñasProducto = async (req, res) => {
