@@ -9,6 +9,11 @@ const usuarioSchema = new mongoose.Schema({
         type: String,
         required: true
     },
+    favoritos: [{
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Producto'
+        
+    }],
     role:{
         type: String,
         required: true,

@@ -7,6 +7,8 @@ import {
   toggleProductoState,
   getFiltrosAlfabeticos,
   getProductosPorLetra,
+  getSearchSuggestions,
+  searchProducts,
   getAvailableFilters,
   getPriceRange
 } from '../controllers/productosc.js';
@@ -23,7 +25,8 @@ router.post('/',
 );
 router.get('/filtros-disponibles/:categoryId', getAvailableFilters);
 router.get('/rango-precios/:categoryId', getPriceRange);
-
+router.get('/sugerencias-busqueda', getSearchSuggestions);
+router.get('/busqueda', searchProducts);
 // Obtener productos con filtros
 router.get('/', getProductos);
 

@@ -65,6 +65,81 @@ const httpUsers = {
             res.status(400).json({ error: 'error al Actualizar usuario' })
             console.log(error)
         }
+    },
+
+ 
+    addToFavorites: async (req, res) => {
+        try {
+            const { userId, productId } = req.params;
+            
+        
+            const user = await User.findById(userId);
+            if (!user) {
+                return res.status(404).json({ error: 'Usuario no encontrado' });
+            }
+            
+           
+            if (!user.favoritos) {
+                user.favoritos = [];
+            }
+            
+      
+            if (user.favoritos.includes(productId)) {
+                return res.status(400).json({ message: 'El producto ya está en favoritos' });
+            }
+            
+      
+            user.favoritos.push(productId);
+            await user.save();
+            
+            res.status(200).json({ message: 'Producto añadido a favoritos', favoritos: user.favoritos });
+        } catch (error) {
+            console.log(error);
+            return res.status(500).json({ error: 'Error al añadir a favoritos' });
+        }
+    },
+
+   
+    removeFromFavorites: async (req, res) => {
+        try {
+            const { userId, productId } = req.params;
+            
+            const user = await User.findById(userId);
+            if (!user) {
+                return res.status(404).json({ error: 'Usuario no encontrado' });
+            }
+            
+           
+            if (!user.favoritos || !user.favoritos.includes(productId)) {
+                return res.status(400).json({ message: 'El producto no está en favoritos' });
+            }
+            
+        
+            user.favoritos = user.favoritos.filter(id => id.toString() !== productId);
+            await user.save();
+            
+            res.status(200).json({ message: 'Producto eliminado de favoritos', favoritos: user.favoritos });
+        } catch (error) {
+            console.log(error);
+            return res.status(500).json({ error: 'Error al eliminar de favoritos' });
+        }
+    },
+
+  
+    getFavorites: async (req, res) => {
+        try {
+            const { userId } = req.params;
+            
+            const user = await User.findById(userId).populate('favoritos');
+            if (!user) {
+                return res.status(404).json({ error: 'Usuario no encontrado' });
+            }
+            
+            res.status(200).json({ favoritos: user.favoritos || [] });
+        } catch (error) {
+            console.log(error);
+            return res.status(500).json({ error: 'Error al obtener favoritos' });
+        }
     }
 };
 
