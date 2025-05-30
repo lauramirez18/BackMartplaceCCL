@@ -1,5 +1,3 @@
-// models/productos.js
-
 import mongoose from 'mongoose';
 
 const productoSchema = new mongoose.Schema({
@@ -36,10 +34,10 @@ const productoSchema = new mongoose.Schema({
     ref: 'Subcategoria',
     required: true
   },
-
   especificaciones: {
     type: Object,
-    required: true
+    required: true,
+    default: {} // Añadido valor por defecto
   },
   stock: {
     type: Number,
@@ -61,7 +59,16 @@ const productoSchema = new mongoose.Schema({
   toObject: { virtuals: true }
 });
 
+// Añadir índice de texto solo para los campos necesarios
+productoSchema.index({
+  nombre: 'text',
+  descripcion: 'text',
+  'especificaciones.tipo': 'text'
+}, {
+  name: 'product_search_index'
+});
 
+// Virtual para imagen principal (se mantiene igual)
 productoSchema.virtual('imagenPrincipal').get(function () {
   return this.imagenes.length > 0 ? this.imagenes[0] : null;
 });
