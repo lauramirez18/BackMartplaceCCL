@@ -1,28 +1,20 @@
 import { Router } from 'express';
 import httpUsers from '../controllers/usuarioc.js';
+import { validarJWT } from '../middlewares/auth.js';
 
 const router = Router();
 
-router.post('/registro', [
+// Rutas públicas
+router.post('/registro', httpUsers.postRegistrarUsuario);
+router.post('/login', httpUsers.postLogin);
 
-], httpUsers.postRegistrarUsuario);
+// Rutas protegidas
+router.get('/', validarJWT, httpUsers.getlistUser);
+router.put('/:id', validarJWT, httpUsers.putModifyUser);
 
-router.post('/login', [
+// Rutas de favoritos (protegidas)
+router.get('/favoritos', validarJWT, httpUsers.getFavorites);
+router.post('/favoritos/:productId', validarJWT, httpUsers.addToFavorites);
+router.delete('/favoritos/:productId', validarJWT, httpUsers.removeFromFavorites);
 
-], httpUsers.postLogin)
-
-router.get('/users', [
- 
-], httpUsers.getlistUser)
-
-router.put('/users/:id', [
-
-], httpUsers.putModifyUser)
-
-// Favorites routes
-router.post('/users/:userId/favorites/:productId', httpUsers.addToFavorites);
-router.delete('/users/:userId/favorites/:productId', httpUsers.removeFromFavorites);
-router.get('/users/:userId/favorites', httpUsers.getFavorites);
-
-export default router
-
+export default router;

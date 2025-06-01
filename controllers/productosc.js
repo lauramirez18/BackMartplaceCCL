@@ -5,6 +5,7 @@ import Subcategoria from '../models/subcategorias.js';
 import Marca from '../models/marcas.js';
 import { uploadImages, deleteImages } from '../utils/teximage.js';
 import { especificacionesCategorias } from '../utils/especificaciones.js';
+import cron from 'node-cron';
 
 // Crear nuevo producto
 export const createProducto = async (req, res) => {
@@ -602,6 +603,352 @@ export const searchProducts = async (req, res) => {
   }
 };
 
+// Establecer oferta para un producto
+export const setProductoOferta = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { 
+      enOferta, 
+      porcentajeDescuento, 
+      fechaInicioOferta, 
+      fechaFinOferta 
+    } = req.body;
+
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({ error: 'ID de producto inválido' });
+    }
+
+    const producto = await Producto.findById(id);
+    if (!producto) {
+      return res.status(404).json({ error: 'Producto no encontrado' });
+    }
+
+    // Validar porcentaje de descuento
+    if (porcentajeDescuento < 0 || porcentajeDescuento > 100) {
+      return res.status(400).json({ error: 'El porcentaje de descuento debe estar entre 0 y 100' });
+    }
+
+    // Actualizar campos de oferta
+    producto.enOferta = enOferta || false;
+    producto.porcentajeDescuento = porcentajeDescuento || 0;
+    producto.fechaInicioOferta = fechaInicioOferta ? new Date(fechaInicioOferta) : null;
+    producto.fechaFinOferta = fechaFinOferta ? new Date(fechaFinOferta) : null;
+    
+    // Calcular precio de oferta
+    producto.precioOferta = producto.precio * (1 - producto.porcentajeDescuento / 100);
+
+    await producto.save();
+
+    res.status(200).json(producto);
+  } catch (error) {
+    console.error('Error al establecer oferta:', error);
+    res.status(500).json({ error: error.message });
+  }
+};
+
+// Obtener productos en oferta
+export const getProductosEnOferta = async (req, res) => {
+  try {
+    const { limit = 10, page = 1 } = req.query;
+    const skip = (page - 1) * limit;
+    
+    const now = new Date();
+    
+    // Buscar productos con oferta activa
+    const productos = await Producto.find({
+      enOferta: true,
+      state: '1',
+      $or: [
+        { fechaInicioOferta: { $exists: false } },
+        { fechaInicioOferta: null },
+        { fechaInicioOferta: { $lte: now } }
+      ],
+      $or: [
+        { fechaFinOferta: { $exists: false } },
+        { fechaFinOferta: null },
+        { fechaFinOferta: { $gte: now } }
+      ]
+    })
+      .populate('category', 'name codigo')
+      .populate('subcategory', 'name')
+      .populate('marca', 'nombre logo')
+      .sort({ porcentajeDescuento: -1 })
+      .skip(skip)
+      .limit(Number(limit));
+    
+    const total = await Producto.countDocuments({
+      enOferta: true,
+      state: '1',
+      $or: [
+        { fechaInicioOferta: { $exists: false } },
+        { fechaInicioOferta: null },
+        { fechaInicioOferta: { $lte: now } }
+      ],
+      $or: [
+        { fechaFinOferta: { $exists: false } },
+        { fechaFinOferta: null },
+        { fechaFinOferta: { $gte: now } }
+      ]
+    });
+    
+    const totalPages = Math.ceil(total / limit);
+    
+    res.status(200).json({
+      productos,
+      pagination: {
+        total,
+        page: Number(page),
+        limit: Number(limit),
+        totalPages
+      }
+    });
+  } catch (error) {
+    console.error('Error al obtener productos en oferta:', error);
+    res.status(500).json({ error: error.message });
+  }
+};
+
+// Generar ofertas automáticas basadas en stock y tiempo
+export const generarOfertasAutomaticas = async (req, res) => {
+  try {
+    const { 
+      stockMinimo = 1, 
+      porcentajeDescuento = 15,
+      duracionOfertaDias = 7
+    } = req.body;
+    
+    // Validar parámetros
+    if (porcentajeDescuento <= 0 || porcentajeDescuento > 100) {
+      return res.status(400).json({
+        error: 'El porcentaje de descuento debe estar entre 1 y 100',
+        detalles: { porcentajeDescuento }
+      });
+    }
+
+    // Buscar todos los productos activos
+    const todosLosProductos = await Producto.find({ 
+      state: '1'
+    });
+    
+    // Agrupar productos por marca para análisis
+    const productosPorMarca = {};
+    const productosConMarcaInvalida = [];
+    
+    for (const producto of todosLosProductos) {
+      if (typeof producto.marca === 'string') {
+        // Si la marca es un string, es inválida
+        productosConMarcaInvalida.push({
+          id: producto._id,
+          nombre: producto.nombre,
+          marcaActual: producto.marca
+        });
+      } else {
+        // Agrupar por ID de marca
+        const marcaId = producto.marca ? producto.marca.toString() : 'sin_marca';
+        if (!productosPorMarca[marcaId]) {
+          productosPorMarca[marcaId] = [];
+        }
+        productosPorMarca[marcaId].push(producto);
+      }
+    }
+
+    // Si hay productos con marcas inválidas, reportar y no continuar
+    if (productosConMarcaInvalida.length > 0) {
+      return res.status(400).json({
+        error: 'Hay productos con marcas inválidas',
+        detalles: 'Algunos productos tienen marcas como texto en lugar de referencias válidas',
+        productosConMarcaInvalida,
+        instrucciones: 'Por favor, actualiza estos productos con las marcas correctas usando el endpoint de actualización de productos'
+      });
+    }
+
+    const productosNoCalifican = [];
+    const productosActualizados = [];
+    const errores = [];
+    
+    // Procesar solo productos con marcas válidas
+    for (const producto of todosLosProductos) {
+      try {
+        const razonesNoCalifica = [];
+        
+        if (producto.enOferta) {
+          razonesNoCalifica.push('Ya está en oferta');
+        }
+        
+        if (producto.stock < stockMinimo) {
+          razonesNoCalifica.push(`Stock insuficiente (tiene ${producto.stock}, necesita ${stockMinimo})`);
+        }
+        
+        if (razonesNoCalifica.length > 0) {
+          productosNoCalifican.push({
+            id: producto._id,
+            nombre: producto.nombre,
+            razones: razonesNoCalifica
+          });
+          continue;
+        }
+        
+        // Si llegamos aquí, el producto califica para oferta
+        producto.enOferta = true;
+        producto.porcentajeDescuento = porcentajeDescuento;
+        producto.fechaInicioOferta = new Date();
+        producto.fechaFinOferta = new Date(Date.now() + (duracionOfertaDias * 24 * 60 * 60 * 1000));
+        
+        await producto.save();
+        
+        productosActualizados.push({
+          id: producto._id,
+          nombre: producto.nombre,
+          precioOriginal: producto.precio,
+          precioOferta: producto.precioOferta,
+          porcentajeDescuento,
+          stock: producto.stock
+        });
+      } catch (error) {
+        errores.push({
+          productoId: producto._id,
+          nombre: producto.nombre,
+          error: error.message
+        });
+      }
+    }
+    
+    res.status(200).json({
+      mensaje: `Se generaron ofertas para ${productosActualizados.length} productos`,
+      productosActualizados,
+      detalles: {
+        totalProductos: todosLosProductos.length,
+        productosConOferta: productosActualizados.length,
+        productosNoCalifican,
+        errores,
+        criteriosUsados: {
+          stockMinimo,
+          porcentajeDescuento,
+          duracionOfertaDias
+        }
+      }
+    });
+  } catch (error) {
+    console.error('Error al generar ofertas automáticas:', error);
+    res.status(500).json({ 
+      error: error.message,
+      detalles: 'Hubo un error al procesar las ofertas automáticas. Verifica que todos los productos tengan marcas válidas.'
+    });
+  }
+};
+
+// Configurar tarea programada para ejecutarse cada día a la medianoche
+export const configurarOfertasAutomaticas = () => {
+  cron.schedule('0 0 * * *', async () => {
+    try {
+      const stockMinimo = 20;
+      const diasEnInventario = 30;
+      const porcentajeDescuento = 15;
+      const duracionOfertaDias = 7;
+      
+      const fechaLimite = new Date();
+      fechaLimite.setDate(fechaLimite.getDate() - diasEnInventario);
+      
+      const productosParaOferta = await Producto.find({
+        state: '1',
+        enOferta: false,
+        $or: [
+          { stock: { $gte: stockMinimo } },
+          { createdAt: { $lte: fechaLimite } }
+        ]
+      });
+      
+      const fechaInicio = new Date();
+      const fechaFin = new Date();
+      fechaFin.setDate(fechaFin.getDate() + duracionOfertaDias);
+      
+      for (const producto of productosParaOferta) {
+        producto.enOferta = true;
+        producto.porcentajeDescuento = porcentajeDescuento;
+        producto.fechaInicioOferta = fechaInicio;
+        producto.fechaFinOferta = fechaFin;
+        producto.precioOferta = producto.precio * (1 - porcentajeDescuento / 100);
+        
+        await producto.save();
+      }
+      
+      console.log(`Ofertas automáticas generadas para ${productosParaOferta.length} productos`);
+    } catch (error) {
+      console.error('Error al generar ofertas automáticas:', error);
+    }
+  });
+};
+
+// Eliminar ofertas de productos
+export const eliminarOfertas = async (req, res) => {
+  try {
+    const { productos } = req.body;
+    
+    let productosActualizados = [];
+    let errores = [];
+
+    if (productos && productos.length > 0) {
+      // Eliminar ofertas solo de los productos especificados
+      for (const productoId of productos) {
+        try {
+          const producto = await Producto.findById(productoId);
+          if (!producto) {
+            errores.push({ id: productoId, error: 'Producto no encontrado' });
+            continue;
+          }
+
+          producto.enOferta = false;
+          producto.porcentajeDescuento = 0;
+          producto.precioOferta = producto.precio;
+          producto.fechaInicioOferta = null;
+          producto.fechaFinOferta = null;
+
+          await producto.save();
+          productosActualizados.push({
+            id: producto._id,
+            nombre: producto.nombre
+          });
+        } catch (error) {
+          errores.push({ id: productoId, error: error.message });
+        }
+      }
+    } else {
+      // Si no se especifican productos, eliminar todas las ofertas
+      const productosEnOferta = await Producto.find({ enOferta: true });
+      
+      for (const producto of productosEnOferta) {
+        try {
+          producto.enOferta = false;
+          producto.porcentajeDescuento = 0;
+          producto.precioOferta = producto.precio;
+          producto.fechaInicioOferta = null;
+          producto.fechaFinOferta = null;
+
+          await producto.save();
+          productosActualizados.push({
+            id: producto._id,
+            nombre: producto.nombre
+          });
+        } catch (error) {
+          errores.push({ id: producto._id, error: error.message });
+        }
+      }
+    }
+
+    res.status(200).json({
+      mensaje: `Se eliminaron las ofertas de ${productosActualizados.length} productos`,
+      productosActualizados,
+      errores
+    });
+  } catch (error) {
+    console.error('Error al eliminar ofertas:', error);
+    res.status(500).json({ 
+      error: 'Error al eliminar ofertas',
+      detalles: error.message 
+    });
+  }
+};
+
 export default {
   createProducto,
   getProductos,
@@ -613,5 +960,12 @@ export default {
   getAvailableFilters,
   getPriceRange,
   getSearchSuggestions,
-  searchProducts
+  searchProducts,
+  setProductoOferta,
+  getProductosEnOferta,
+  generarOfertasAutomaticas,
+  configurarOfertasAutomaticas,
+  eliminarOfertas
 };
+
+

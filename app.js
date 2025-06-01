@@ -13,6 +13,7 @@ import reseñas from "./routes/resenas.js";
 import subcategorias from "./routes/subcategorias.js";
 import authRoutes from "./routes/gogole.js";
 import marcasRoutes from './routes/marcasr.js';
+import { configurarOfertasAutomaticas } from './controllers/productosc.js';
 dotenv.config();
 
 const app = express();
@@ -71,5 +72,6 @@ mongoose.connect(process.env.MONGODB_CCL, {
 
 const PORT = process.env.PORT || 3200;
 app.listen(PORT, () => {
-  console.log(`🚀 Servidor corriendo en http://localhost:${PORT}`);
+  console.log(`Servidor corriendo en puerto ${PORT}`);
+  configurarOfertasAutomaticas();
 });

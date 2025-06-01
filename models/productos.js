@@ -37,7 +37,7 @@ const productoSchema = new mongoose.Schema({
   especificaciones: {
     type: Object,
     required: true,
-    default: {} // Añadido valor por defecto
+    default: {}
   },
   stock: {
     type: Number,
@@ -48,6 +48,32 @@ const productoSchema = new mongoose.Schema({
     type: String,
     enum: ['1', '0'],
     default: '1'
+  },
+  // Campos para ofertas
+  enOferta: {
+    type: Boolean,
+    default: false
+  },
+  porcentajeDescuento: {
+    type: Number,
+    min: 0,
+    max: 100,
+    default: 0
+  },
+  precioOferta: {
+    type: Number,
+    min: 0,
+    default: function() {
+      return this.enOferta ? this.precio * (1 - this.porcentajeDescuento / 100) : this.precio;
+    }
+  },
+  fechaInicioOferta: {
+    type: Date,
+    default: null
+  },
+  fechaFinOferta: {
+    type: Date,
+    default: null
   },
   createdAt: {
     type: Date,
@@ -68,9 +94,32 @@ productoSchema.index({
   name: 'product_search_index'
 });
 
-// Virtual para imagen principal (se mantiene igual)
+// Virtual para imagen principal
 productoSchema.virtual('imagenPrincipal').get(function () {
   return this.imagenes.length > 0 ? this.imagenes[0] : null;
 });
 
-export default mongoose.model('Producto', productoSchema);
+// Virtual para verificar si la oferta está activa
+productoSchema.virtual('ofertaActiva').get(function() {
+  if (!this.enOferta) return false;
+  
+  const now = new Date();
+  const inicioValido = !this.fechaInicioOferta || now >= this.fechaInicioOferta;
+  const finValido = !this.fechaFinOferta || now <= this.fechaFinOferta;
+  
+  return inicioValido && finValido;
+});
+
+// Pre-save hook para calcular precio de oferta
+productoSchema.pre('save', function(next) {
+  if (this.enOferta && this.porcentajeDescuento > 0) {
+    this.precioOferta = this.precio * (1 - this.porcentajeDescuento / 100);
+  } else {
+    this.precioOferta = this.precio;
+  }
+  next();
+});
+
+const Producto = mongoose.model('Producto', productoSchema);
+export default Producto;
+
