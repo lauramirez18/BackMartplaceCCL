@@ -10,12 +10,20 @@ import {
   getSearchSuggestions,
   searchProducts,
   getAvailableFilters,
-  getPriceRange
+  getPriceRange,
+ 
+  setProductoOferta,
+  getProductosEnOferta,
+  generarOfertasAutomaticas,
+  eliminarOfertas
 } from '../controllers/productosc.js';
 import upload from '../middleware/upploads.js';
 import { cleanUploads } from '../middleware/upploads.js';
 
 const router = Router();
+
+// Ruta para obtener todos los productos
+router.get('/', getProductos);
 
 // Crear nuevo producto
 router.post('/', 
@@ -23,13 +31,16 @@ router.post('/',
   cleanUploads,
   createProducto
 );
+// Rutas específicas primero
+router.get('/ofertas', getProductosEnOferta);
 router.get('/filtros-disponibles/:categoryId', getAvailableFilters);
 router.get('/rango-precios/:categoryId', getPriceRange);
 router.get('/sugerencias-busqueda', getSearchSuggestions);
 router.get('/busqueda', searchProducts);
-// Obtener productos con filtros
-router.get('/', getProductos);
+router.get('/filtros-alfabeticos/:category', getFiltrosAlfabeticos);
+router.get('/filtro-alfabetico/:category/:campo/:letra', getProductosPorLetra);
 
+// Rutas con parámetros genéricos después
 router.get('/:id', getProductoById);
 
 // Actualizar producto
@@ -50,4 +61,11 @@ router.get('/filtros-alfabeticos/:category', getFiltrosAlfabeticos);
 
 router.get('/filtro-alfabetico/:category/:campo/:letra', getProductosPorLetra);
 
+// Nuevas rutas para ofertas
+router.put('/oferta/:id', setProductoOferta);
+router.get('/ofertas', getProductosEnOferta);
+router.post('/generar', generarOfertasAutomaticas);
+router.post('/eliminar-ofertas', eliminarOfertas);
+
 export default router;
+
