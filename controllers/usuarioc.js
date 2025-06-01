@@ -1,7 +1,7 @@
-import User from '../models/usuarios.js'
-import { generarJWT } from '../middleware/validar-jwt.js'
+import User from '../models/usuarios.js';
+import mongoose from 'mongoose';
+import { generarJWT } from '../middleware/validar-jwt.js';
 import bcrypt from 'bcryptjs';
-
 
 const httpUsers = {
 
@@ -36,13 +36,19 @@ const httpUsers = {
                 return res.status(400).json({ error: 'contraseña incorrecta' })
             }
             const token = await generarJWT(user);
-            res
-            res.status(200).json({ token ,user: user.name })
+            res.status(200).json({ 
+                token,
+                user: {
+                    id: user._id,
+                    name: user.name,
+                    email: user.email,
+                    role: user.role
+                }
+            });
         } catch (error) {
             console.log(error)
             return res.status(500).json({ error: 'error al autenticar usuario' })
         }
-
     },
     getlistUser: async (req, res) => {
         try {
@@ -67,28 +73,34 @@ const httpUsers = {
         }
     },
 
- 
+
     addToFavorites: async (req, res) => {
         try {
             const { userId, productId } = req.params;
             
-        
+            // Validar que userId y productId existan
+            if (!userId || !productId) {
+                return res.status(400).json({ error: 'userId y productId son requeridos' });
+            }
+            
+            // Validar que sean ObjectIds válidos
+            if (!mongoose.Types.ObjectId.isValid(userId) || !mongoose.Types.ObjectId.isValid(productId)) {
+                return res.status(400).json({ error: 'userId o productId inválidos' });
+            }
+            
             const user = await User.findById(userId);
             if (!user) {
                 return res.status(404).json({ error: 'Usuario no encontrado' });
             }
             
-           
             if (!user.favoritos) {
                 user.favoritos = [];
             }
             
-      
             if (user.favoritos.includes(productId)) {
                 return res.status(400).json({ message: 'El producto ya está en favoritos' });
             }
             
-      
             user.favoritos.push(productId);
             await user.save();
             
@@ -145,3 +157,7 @@ const httpUsers = {
 
 
 export default httpUsers;
+
+
+
+
