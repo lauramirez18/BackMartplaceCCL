@@ -1,5 +1,6 @@
 import mongoose from 'mongoose';
 import Marca from '../models/marcas.js';
+import Producto from '../models/productos.js';
 
 // Crear marca
 export const createMarca = async (req, res) => {
@@ -48,11 +49,23 @@ export const getMarcaById = async (req, res) => {
     if (!marca) {
       return res.status(404).json({ error: "Marca no encontrada" });
     }
+
+    // Obtener productos relacionados a la marca
+    const productos = await Producto.find({ 
+      marca: id,
+      state: '1'
+    })
+    .populate('category', 'name codigo')
+    .populate('subcategory', 'name')
+    .populate('marca', 'nombre logo');
     
-    res.status(200).json(marca);
+    res.status(200).json({
+      marca,
+      productos
+    });
   } catch (error) {
     res.status(500).json({ 
-      error: "Error al obtener marca",
+      error: "Error al obtener marca y sus productos",
       details: process.env.NODE_ENV === 'development' ? error.message : undefined
     });
   }
