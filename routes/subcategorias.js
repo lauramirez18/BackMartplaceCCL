@@ -3,13 +3,17 @@ import {
   inicializarSubcategorias,
   obtenerSubcategorias,
   obtenerPorCategoria,
-  cambiarEstado
+  cambiarEstado,
+  crearSubcategoria
 } from '../controllers/subcategorias.js';
 
 const router = Router();
 
 // Inicialización (ejecutar solo una vez)
 router.post('/inicializar', inicializarSubcategorias);
+
+// Crear nueva subcategoría
+router.post('/', crearSubcategoria);
 
 // Obtener todas
 router.get('/', obtenerSubcategorias);
