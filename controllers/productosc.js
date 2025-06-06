@@ -122,10 +122,42 @@ export const getProductos = async (req, res) => {
       ...filters 
     } = req.query;
 
+    // Agregar log para ver los parámetros recibidos
+    console.log('Parámetros recibidos:', {
+      category,
+      subcategory,
+      minPrice,
+      maxPrice,
+      search,
+      sort,
+      page,
+      limit,
+      format,
+      filters
+    });
+
     const filtro = { state: '1' };
 
     // Filtros básicos
-    if (category) filtro.category = category;
+    if (category) {
+      filtro.category = category;
+      
+      // Obtener la categoría para validar las especificaciones
+      const categoria = await Categoria.findById(category);
+      if (!categoria) {
+        return res.status(404).json({ error: "Categoría no encontrada" });
+      }
+
+      // Verificar si la categoría tiene especificaciones definidas
+      const especificacionesCategoria = especificacionesCategorias[categoria.codigo];
+      if (!especificacionesCategoria) {
+        return res.status(400).json({ 
+          error: "Esta categoría no tiene especificaciones definidas",
+          categoria: categoria.name
+        });
+      }
+    }
+    
     if (subcategory) filtro.subcategory = subcategory;
     
     // Filtro por precio
@@ -137,28 +169,35 @@ export const getProductos = async (req, res) => {
 
     // Búsqueda de texto
     if (search && search.trim().length > 0) {
-      // Usar búsqueda de texto completo si está disponible
       if (Producto.schema.indexes().some(idx => idx[0]['$**'] === 'text')) {
         filtro.$text = { $search: search };
       } else {
-        // Búsqueda por regex como fallback
         filtro.$or = [
           { nombre: { $regex: search, $options: 'i' } },
           { descripcion: { $regex: search, $options: 'i' } },
-          { 'detalles.modelo': { $regex: search, $options: 'i' } },
           { 'especificaciones.tipo': { $regex: search, $options: 'i' } }
         ];
       }
     }
 
-    // Filtros adicionales
+    // Filtros de especificaciones
     if (Object.keys(filters).length > 0) {
-      for (const key in filters) {
-        if (filters[key]) {
-          if (Array.isArray(filters[key])) {
-            filtro[`especificaciones.${key}`] = { $in: filters[key] };
-          } else {
-            filtro[`especificaciones.${key}`] = filters[key];
+      const categoria = await Categoria.findById(category);
+      if (categoria) {
+        const especificacionesCategoria = especificacionesCategorias[categoria.codigo];
+        if (especificacionesCategoria) {
+          // Obtener el esquema de especificaciones para esta categoría
+          const schema = especificacionesCategoria.describe().keys;
+          
+          for (const key in filters) {
+            // Extraer el nombre de la especificación del parámetro
+            const specKey = key.replace('especificaciones.', '');
+            if (filters[key] && schema[specKey]) {
+              // Convertir el valor del filtro a string y aplicar búsqueda exacta
+              const filterValue = String(filters[key]);
+              // Usar la notación de punto para el filtro
+              filtro[`especificaciones.${specKey}`] = filterValue;
+            }
           }
         }
       }
@@ -183,6 +222,9 @@ export const getProductos = async (req, res) => {
       .populate('subcategory', 'name')
       .populate('marca', 'nombre logo')
       .sort(sortOption);
+
+    // Agregar log para depuración
+    console.log('Filtro aplicado:', JSON.stringify(filtro, null, 2));
 
     // Paginación
     if (format === 'detailed') {

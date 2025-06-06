@@ -2,6 +2,7 @@
 import Reseña from '../utils/resenas.js' // Assuming you moved this to models/resenas.js
 import Producto from '../models/productos.js'
 import Usuario from '../models/usuarios.js' // Assuming you have a user model now
+import mongoose from 'mongoose'
 
 // Helper function to update product's average rating
 export const actualizarPromedioProducto = async (productoId) => {
@@ -158,6 +159,86 @@ export const eliminarReseña = async (req, res) => {
         console.error('Error al eliminar la reseña:', error);
         res.status(500).json({
             msg: 'Error interno del servidor al eliminar la reseña',
+            detalle: error.message
+        });
+    }
+};
+
+// Obtener resumen de valoraciones de un producto
+export const obtenerResumenValoraciones = async (req, res) => {
+    try {
+        const { productoId } = req.params;
+
+        // Verificar si el producto existe
+        const productoExiste = await Producto.findById(productoId);
+        if (!productoExiste) {
+            return res.status(404).json({ msg: 'Producto no encontrado.' });
+        }
+
+        // Obtener el resumen de valoraciones
+        const resumen = await Reseña.aggregate([
+            {
+                $match: { 
+                    producto: new mongoose.Types.ObjectId(productoId)
+                }
+            },
+            {
+                $group: {
+                    _id: null,
+                    promedioTotal: { $avg: '$calificacion' },
+                    totalReseñas: { $sum: 1 },
+                    // Contar cantidad de cada valoración
+                    '5_estrellas': { 
+                        $sum: { $cond: [{ $eq: ['$calificacion', 5] }, 1, 0] }
+                    },
+                    '4_estrellas': {
+                        $sum: { $cond: [{ $eq: ['$calificacion', 4] }, 1, 0] }
+                    },
+                    '3_estrellas': {
+                        $sum: { $cond: [{ $eq: ['$calificacion', 3] }, 1, 0] }
+                    },
+                    '2_estrellas': {
+                        $sum: { $cond: [{ $eq: ['$calificacion', 2] }, 1, 0] }
+                    },
+                    '1_estrella': {
+                        $sum: { $cond: [{ $eq: ['$calificacion', 1] }, 1, 0] }
+                    }
+                }
+            },
+            {
+                $project: {
+                    _id: 0,
+                    promedioTotal: { $round: ['$promedioTotal', 1] },
+                    totalReseñas: 1,
+                    distribucion: {
+                        5: '$5_estrellas',
+                        4: '$4_estrellas',
+                        3: '$3_estrellas',
+                        2: '$2_estrellas',
+                        1: '$1_estrella'
+                    }
+                }
+            }
+        ]);
+
+        // Si no hay reseñas, devolver un objeto con valores por defecto
+        const resultado = resumen[0] || {
+            promedioTotal: 0,
+            totalReseñas: 0,
+            distribucion: {
+                5: 0,
+                4: 0,
+                3: 0,
+                2: 0,
+                1: 0
+            }
+        };
+
+        res.json(resultado);
+    } catch (error) {
+        console.error('Error al obtener resumen de valoraciones:', error);
+        res.status(500).json({
+            msg: 'Error interno del servidor al obtener el resumen de valoraciones',
             detalle: error.message
         });
     }
