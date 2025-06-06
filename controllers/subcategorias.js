@@ -1,4 +1,5 @@
 import Subcategoria from '../models/subcategorias.js';
+import Categoria from '../models/categorias.js';
 
 // Subcategorías predefinidas (2 por categoría)
 const SUBCATEGORIAS_PREDEFINIDAS = [
@@ -40,7 +41,12 @@ const SUBCATEGORIAS_PREDEFINIDAS = [
 
   // Componentes
   { codigo: 'componente_gaming', name: 'Gaming', categoriaPadre: 'componentes' },
-  { codigo: 'componente_oficina', name: 'Oficina', categoriaPadre: 'componentes' }
+  { codigo: 'componente_oficina', name: 'Oficina', categoriaPadre: 'componentes' },
+
+  // Impresoras
+  { codigo: 'impresora_laser', name: 'Láser', categoriaPadre: 'impresoras' },
+  { codigo: 'impresora_inyeccion', name: 'Inyección de Tinta', categoriaPadre: 'impresoras' },
+  { codigo: 'impresora_multifuncional', name: 'Multifuncional', categoriaPadre: 'impresoras' }
 ];
 
 // Inicializar subcategorías (solo ejecutar una vez)
@@ -90,13 +96,6 @@ export const obtenerPorCategoria = async (req, res) => {
       state: '1'
     });
 
-    if (subcategorias.length === 0) {
-      return res.status(404).json({
-        success: false,
-        error: 'No se encontraron subcategorías para esta categoría'
-      });
-    }
-
     res.status(200).json({
       success: true,
       count: subcategorias.length,
@@ -141,9 +140,55 @@ export const cambiarEstado = async (req, res) => {
   }
 };
 
+// Crear una nueva subcategoría
+export const crearSubcategoria = async (req, res) => {
+  try {
+    const { codigo, name, categoriaPadre } = req.body;
+
+    // Verificar que la categoría padre existe
+    const categoriaExiste = await Categoria.findOne({ codigo: categoriaPadre });
+    if (!categoriaExiste) {
+      return res.status(404).json({
+        success: false,
+        error: 'La categoría padre no existe'
+      });
+    }
+
+    // Verificar que no existe una subcategoría con el mismo código
+    const subcategoriaExistente = await Subcategoria.findOne({ codigo });
+    if (subcategoriaExistente) {
+      return res.status(400).json({
+        success: false,
+        error: 'Ya existe una subcategoría con este código'
+      });
+    }
+
+    const subcategoria = new Subcategoria({
+      codigo,
+      name,
+      categoriaPadre
+    });
+
+    await subcategoria.save();
+
+    res.status(201).json({
+      success: true,
+      message: 'Subcategoría creada exitosamente',
+      data: subcategoria
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      error: 'Error al crear subcategoría',
+      details: error.message
+    });
+  }
+};
+
 export default {
   inicializarSubcategorias,
   obtenerSubcategorias,
   obtenerPorCategoria,
-  cambiarEstado
+  cambiarEstado,
+  crearSubcategoria
 };

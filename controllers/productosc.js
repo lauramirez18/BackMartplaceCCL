@@ -148,13 +148,29 @@ export const getProductos = async (req, res) => {
         return res.status(404).json({ error: "Categoría no encontrada" });
       }
 
-      // Verificar si la categoría tiene especificaciones definidas
-      const especificacionesCategoria = especificacionesCategorias[categoria.codigo];
-      if (!especificacionesCategoria) {
+      // Verificar si la categoría tiene especificaciones definidas (predefinidas o personalizadas)
+      const especificacionesPredefinidas = especificacionesCategorias[categoria.codigo];
+      const especificacionesPersonalizadas = categoria.especificaciones;
+
+      if (!especificacionesPredefinidas && Object.keys(especificacionesPersonalizadas).length === 0) {
         return res.status(400).json({ 
           error: "Esta categoría no tiene especificaciones definidas",
           categoria: categoria.name
         });
+      }
+
+      // Si hay filtros de especificaciones
+      if (Object.keys(filters).length > 0) {
+        for (const key in filters) {
+          // Extraer el nombre de la especificación del parámetro
+          const specKey = key.replace('especificaciones.', '');
+          if (filters[key]) {
+            // Convertir el valor del filtro a string y aplicar búsqueda exacta
+            const filterValue = String(filters[key]);
+            // Usar la notación de punto para el filtro
+            filtro[`especificaciones.${specKey}`] = filterValue;
+          }
+        }
       }
     }
     
@@ -177,29 +193,6 @@ export const getProductos = async (req, res) => {
           { descripcion: { $regex: search, $options: 'i' } },
           { 'especificaciones.tipo': { $regex: search, $options: 'i' } }
         ];
-      }
-    }
-
-    // Filtros de especificaciones
-    if (Object.keys(filters).length > 0) {
-      const categoria = await Categoria.findById(category);
-      if (categoria) {
-        const especificacionesCategoria = especificacionesCategorias[categoria.codigo];
-        if (especificacionesCategoria) {
-          // Obtener el esquema de especificaciones para esta categoría
-          const schema = especificacionesCategoria.describe().keys;
-          
-          for (const key in filters) {
-            // Extraer el nombre de la especificación del parámetro
-            const specKey = key.replace('especificaciones.', '');
-            if (filters[key] && schema[specKey]) {
-              // Convertir el valor del filtro a string y aplicar búsqueda exacta
-              const filterValue = String(filters[key]);
-              // Usar la notación de punto para el filtro
-              filtro[`especificaciones.${specKey}`] = filterValue;
-            }
-          }
-        }
       }
     }
 
@@ -458,8 +451,23 @@ export const getAvailableFilters = async (req, res) => {
       return res.status(404).json({ message: 'Categoría no encontrada' });
     }
 
-    const schema = especificacionesCategorias[categoria.codigo] || {};
-    const specKeys = ['tipo', ...Object.keys(schema.describe?.().keys || {})];
+    // Primero intentar obtener especificaciones predefinidas
+    let schema = especificacionesCategorias[categoria.codigo];
+    let specKeys = [];
+
+    if (schema) {
+      // Si hay especificaciones predefinidas, usarlas
+      specKeys = ['tipo', ...Object.keys(schema.describe?.().keys || {})];
+    } else if (categoria.especificaciones && Object.keys(categoria.especificaciones).length > 0) {
+      // Si no hay predefinidas pero hay personalizadas, usarlas
+      specKeys = Object.keys(categoria.especificaciones);
+    } else {
+      // Si no hay especificaciones definidas, devolver un objeto vacío
+      return res.status(200).json({
+        categoria: categoria.name,
+        filters: {}
+      });
+    }
 
     const filters = {};
 
