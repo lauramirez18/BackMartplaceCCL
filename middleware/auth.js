@@ -29,4 +29,7 @@ export const validarJWT = async (req, res, next) => {
         console.log(error);
         res.status(401).json({ error: 'Token no válido' });
     }
-}; 
+};
+
+// Exportar también como auth para mantener compatibilidad
+export const auth = validarJWT; 

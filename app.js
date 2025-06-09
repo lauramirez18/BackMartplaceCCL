@@ -14,6 +14,9 @@ import subcategorias from "./routes/subcategorias.js";
 import authRoutes from "./routes/gogole.js";
 import marcasRoutes from './routes/marcasr.js';
 import { configurarOfertasAutomaticas } from './controllers/productosc.js';
+import { fileUploadMiddleware } from './middleware/fileUpload.js';
+import userRoutes from './routes/usuarios.js';
+
 dotenv.config();
 
 const app = express();
@@ -40,6 +43,7 @@ app.options('*', cors(corsOptions));
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 app.use(express.static("public"));
+app.use(fileUploadMiddleware);
 
 // Rutas
 app.use('/api/subcategorias', subcategorias);
@@ -49,6 +53,7 @@ app.use('/api/inventario', inventario);
 app.use('/api/ordenes', ordenes);
 app.use('/api/productos', productos);
 app.use('/api/usuarios', usuarios); 
+app.use('/api/account', userRoutes);
 app.use('/api', testRoutes);
 app.use('/api/upload', router);
 app.use('/api/resenas', reseñas); 

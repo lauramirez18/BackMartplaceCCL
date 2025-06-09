@@ -7,28 +7,59 @@ const usuarioSchema = new mongoose.Schema({
     },
     email: {
         type: String,
-        required: true
+        required: true,
+        unique: true
+    },
+    phone: {
+        type: String
+    },
+    address: {
+        type: String
+    },
+    city: {
+        type: String
+    },
+    photoUrl: {
+        type: String
+    },
+    preferences: {
+        language: {
+            type: String,
+            enum: ['es', 'en'],
+            default: 'es'
+        },
+        theme: {
+            type: String,
+            enum: ['light', 'dark'],
+            default: 'light'
+        },
+        notifications: {
+            type: Boolean,
+            default: true
+        },
+        newsletter: {
+            type: Boolean,
+            default: true
+        }
     },
     favoritos: [{
         type: mongoose.Schema.Types.ObjectId,
         ref: 'Producto'
-        
     }],
-    role:{
+    role: {
         type: String,
         required: true,
         default: 'user' // user, admin
-    },  
+    },
     password: {
         type: String,
         required: true
     },
-      estado: { 
+    estado: {
         type: Boolean,
-        default: true 
+        default: true
     }
-},
-{
+}, {
     timestamps: true
 });
 
