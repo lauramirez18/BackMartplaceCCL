@@ -15,7 +15,8 @@ import {
   setProductoOferta,
   getProductosEnOferta,
   generarOfertasAutomaticas,
-  eliminarOfertas
+  eliminarOfertas,
+  checkProductStock
 } from '../controllers/productosc.js';
 import upload from '../middleware/upploads.js';
 import { cleanUploads } from '../middleware/upploads.js';
@@ -66,6 +67,9 @@ router.put('/oferta/:id', setProductoOferta);
 router.get('/ofertas', getProductosEnOferta);
 router.post('/generar', generarOfertasAutomaticas);
 router.post('/eliminar-ofertas', eliminarOfertas);
+
+// Agregar la nueva ruta para verificar stock
+router.get('/:productId/stock', checkProductStock);
 
 export default router;
 

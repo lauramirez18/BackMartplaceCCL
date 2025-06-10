@@ -13,6 +13,7 @@ import reseñas from "./routes/resenas.js";
 import subcategorias from "./routes/subcategorias.js";
 import authRoutes from "./routes/gogole.js";
 import marcasRoutes from './routes/marcasr.js';
+import paymentsRoutes from './routes/payments.js';
 import { configurarOfertasAutomaticas } from './controllers/productosc.js';
 import { fileUploadMiddleware } from './middleware/fileUpload.js';
 import userRoutes from './routes/usuarios.js';
@@ -58,6 +59,7 @@ app.use('/api', testRoutes);
 app.use('/api/upload', router);
 app.use('/api/resenas', reseñas); 
 app.use('/api/marcas', marcasRoutes);
+app.use('/api/payments', paymentsRoutes);
 app.use(express.static('public'));
 
 

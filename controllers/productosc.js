@@ -999,6 +999,27 @@ export const eliminarOfertas = async (req, res) => {
   }
 };
 
+// Verificar stock de un producto
+export const checkProductStock = async (req, res) => {
+    try {
+        const { productId } = req.params;
+        const producto = await Producto.findById(productId);
+        
+        if (!producto) {
+            return res.status(404).json({ message: "Producto no encontrado" });
+        }
+
+        res.status(200).json({
+            nombre: producto.nombre,
+            stock: producto.stock,
+            ultimaActualizacion: producto.updatedAt
+        });
+    } catch (error) {
+        console.error('Error verificando stock:', error);
+        res.status(500).json({ message: error.message });
+    }
+};
+
 export default {
   createProducto,
   getProductos,
@@ -1015,7 +1036,8 @@ export default {
   getProductosEnOferta,
   generarOfertasAutomaticas,
   configurarOfertasAutomaticas,
-  eliminarOfertas
+  eliminarOfertas,
+  checkProductStock
 };
 
 

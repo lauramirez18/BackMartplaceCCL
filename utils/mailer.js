@@ -11,24 +11,6 @@ const transporter = nodemailer.createTransport({
 });
 
 export const sendInvoiceEmail = async (to, subject, text, attachmentPath = null) => {
-  try {
-    const mailOptions = {
-      from: `"CCL Soporte" <${process.env.EMAIL_USER}>`,
-      to,
-      subject,
-      text,
-      attachments: attachmentPath ? [
-        {
-          filename: 'factura.pdf',
-          path: attachmentPath
-        }
-      ] : []
-    };
-
-    const info = await transporter.sendMail(mailOptions);
-    console.log('✅ Email enviado:', info.response);
-  } catch (error) {
-    console.error('❌ Error enviando email:', error);
-    throw error;
-  }
+  console.log('📧 Email simulado (desactivado temporalmente):', { to, subject });
+  return { message: 'Envío de correo desactivado temporalmente' };
 };
