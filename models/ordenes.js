@@ -122,18 +122,35 @@ OrdenesSchema.index({ 'paymentDetails.paypalOrderId': 1 });
 
 // Métodos del esquema
 OrdenesSchema.methods.calculateTotal = function() {
-    return this.products.reduce((total, product) => {
+    // Usar el precio que ya viene en el producto (que ya debería incluir cualquier descuento)
+    // Esto asegura que el cálculo coincida con lo que el usuario ve en el frontend
+    const total = this.products.reduce((total, product) => {
         return total + (product.price * product.quantity);
     }, 0);
+    
+    return total;
 };
 
 // Middleware pre-save para validar que el total sea correcto
 OrdenesSchema.pre('save', function(next) {
     if (this.isModified('products') || this.isNew) {
+        console.log('=== Validando total de la orden ===');
         const calculatedTotal = this.calculateTotal();
-        if (Math.abs(this.total - calculatedTotal) > 0.01) {
-            return next(new Error('El total no coincide con la suma de los productos'));
+        const difference = Math.abs(this.total - calculatedTotal);
+        
+        console.log('Total en la orden:', this.total);
+        console.log('Total calculado:', calculatedTotal);
+        console.log('Diferencia:', difference);
+        
+        if (difference > 0.01) {
+            const errorMsg = `El total no coincide con la suma de los productos. ` +
+                           `Esperado: ${this.total}, Calculado: ${calculatedTotal}, Diferencia: ${difference}`;
+            console.error('Error de validación:', errorMsg);
+            return next(new Error(errorMsg));
         }
+        console.log('Validación de total exitosa');
+    } else {
+        console.log('No se validó el total (products no modificado)');
     }
     next();
 });

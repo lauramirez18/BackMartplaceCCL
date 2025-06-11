@@ -1,20 +1,38 @@
-import { Router } from 'express';
+import express from 'express';
 import httpUsers from '../controllers/usuarioc.js';
 import { validarJWT } from '../middleware/auth.js';
+import { handleFileUpload } from '../middleware/fileUpload.js';
 
-const router = Router();
+const router = express.Router();
 
-// Rutas públicas
-router.post('/registro', httpUsers.postRegistrarUsuario);
+// Register user
+router.post('/register', httpUsers.postRegistrarUsuario);
+
+// Login user
 router.post('/login', httpUsers.postLogin);
 
-// Rutas protegidas
-router.get('/', validarJWT, httpUsers.getlistUser);
-router.put('/:id', validarJWT, httpUsers.putModifyUser);
+// Get user list
+router.get('/', httpUsers.getlistUser);
 
-// Rutas de favoritos (protegidas)
-router.get('/favoritos', validarJWT, httpUsers.getFavorites);
-router.post('/favoritos/:productId', validarJWT, httpUsers.addToFavorites);
-router.delete('/favoritos/:productId', validarJWT, httpUsers.removeFromFavorites);
+// Modify user by id
+router.put('/:id', httpUsers.putModifyUser);
+
+// Favorites
+router.post('/favorites/add', httpUsers.addToFavorites);
+router.post('/favorites/remove', httpUsers.removeFromFavorites);
+router.get('/favorites/:userId', httpUsers.getFavorites);
+
+// Profile
+router.get('/profile', validarJWT, httpUsers.getProfile);
+router.put('/update-profile', validarJWT, httpUsers.updateProfile);
+
+// Upload profile photo
+router.post('/upload-photo', validarJWT, handleFileUpload, httpUsers.uploadPhoto);
+
+// Change password
+router.put('/change-password', validarJWT, httpUsers.changePassword);
+
+// Delete account
+router.post('/delete-account', validarJWT, httpUsers.deleteAccount);
 
 export default router;

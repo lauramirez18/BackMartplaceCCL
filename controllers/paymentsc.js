@@ -123,9 +123,19 @@ export const createPayPalOrder = async (req, res) => {
 
     // Crear la orden en la base de datos
     console.log('Creando orden en BD...');
+    
+    // Asegurarse de que los productos tengan el precio correcto
+    const processedProducts = products.map(product => ({
+      ...product,
+      // Usar el precio que ya viene del frontend (que ya incluye descuentos si aplican)
+      price: Number(product.price),
+      // Asegurarnos de que la cantidad sea un número
+      quantity: Number(product.quantity)
+    }));
+    
     const ordenData = {
       usuarioId,
-      products,
+      products: processedProducts,
       total: Number(total),
       shippingInfo: cleanShippingInfo,
       status: 'pendiente',

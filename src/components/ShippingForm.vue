@@ -28,7 +28,8 @@ const renderPayPalButtons = () => {
                 products: authStore.cartItems.map(item => ({
                   productId: item._id,
                   quantity: item.quantity,
-                  price: item.price
+                  price: item.precioOferta || item.price, // Usar precio con descuento si está disponible
+                  precioOferta: item.precioOferta // Incluir el precio de oferta en caso de que sea necesario en el backend
                 })),
                 total: totalCOP.value
               })

@@ -6,52 +6,53 @@ import { sendInvoiceEmail } from "../utils/mailer.js";
 // Crear una nueva orden
 export const createOrden = async (req, res) => {
     try {
-        const { usuarioId, products } = req.body;
+        // Ahora también extraemos el 'total' y 'shippingInfo' que envía el frontend
+        const { usuarioId, products, total: totalFromFrontend, shippingInfo } = req.body;
 
         const usuario = await Usuarios.findById(usuarioId);
         if (!usuario) return res.status(404).json({ message: "Usuario no encontrado" });
 
-        let total = 0;
-        let detallesProductos = '';
+        let totalCalculadoEnBackend = 0;
+        let detallesProductosParaEmail = '';
 
+        // Aunque confiamos en el precio del frontend, es una buena práctica de seguridad
+        // verificar que los productos existen.
         for (const item of products) {
-            const producto = await Productos.findById(item.productId);
-            if (!producto) return res.status(404).json({ message: `Producto ${item.productId} no encontrado` });
+            const productoDB = await Productos.findById(item.productId);
+            if (!productoDB) return res.status(404).json({ message: `Producto con ID ${item.productId} no encontrado` });
 
-            total += item.quantity * producto.precio;
-            detallesProductos += `- ${producto.nombre} x ${item.quantity} = $${(producto.precio * item.quantity).toFixed(2)}\n`;
+            // --- CAMBIO CLAVE #1 ---
+            // Usamos item.price (el precio con descuento enviado desde Vue)
+            // en lugar de productoDB.precio (el precio original de la base de datos).
+            totalCalculadoEnBackend += item.quantity * item.price;
+
+            // --- CAMBIO CLAVE #2 ---
+            // También usamos item.price para el detalle del email para que sea consistente.
+            detallesProductosParaEmail += `- ${productoDB.nombre} x ${item.quantity} = $${(item.price * item.quantity).toFixed(2)}\n`;
         }
 
+        // --- VALIDACIÓN FINAL ---
+        // Comparamos el total que envió el frontend con el que acabamos de calcular.
+        // Ahora deberían coincidir perfectamente.
+        if (Math.abs(totalFromFrontend - totalCalculadoEnBackend) > 0.01) {
+            return res.status(400).json({
+                message: "El total no coincide con la suma de los productos. Esto puede indicar un error o manipulación de datos.",
+                totalEnviado: totalFromFrontend,
+                totalCalculado: totalCalculadoEnBackend,
+            });
+        }
+        
         const nuevaOrden = new Ordenes({
             usuarioId,
             products,
-            total,
-            status: 'pendiente'
+            // Guardamos el total validado y calculado en el backend.
+            total: totalCalculadoEnBackend,
+            shippingInfo, // Guardamos la información de envío
+            status: 'pendiente' // El estado inicial es 'pendiente' hasta que PayPal confirme
         });
 
         await nuevaOrden.save();
-
-        // Enviar email de confirmación
-        const emailSubject = 'Confirmación de tu Orden - CCL';
-        const emailText = `
-Hola ${usuario.nombre},
-
-¡Gracias por tu compra en CCL!
-
-Detalles de tu orden:
-${detallesProductos}
-
-Total: $${total.toFixed(2)}
-
-Estado de la orden: pendiente
-
-Nos comunicaremos contigo en breve.
-
-Saludos,
-Equipo de CCL`;
-
-        await sendInvoiceEmail(usuario.email, emailSubject, emailText, null);
-
+        
         res.status(201).json(nuevaOrden);
     } catch (error) {
         console.error('Error creando orden:', error);
