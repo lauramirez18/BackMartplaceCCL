@@ -18,9 +18,9 @@ router.get('/', httpUsers.getlistUser);
 router.put('/:id', httpUsers.putModifyUser);
 
 // Favorites
-router.post('/favorites/add', httpUsers.addToFavorites);
-router.post('/favorites/remove', httpUsers.removeFromFavorites);
-router.get('/favorites/:userId', httpUsers.getFavorites);
+router.get('/favoritos', validarJWT, httpUsers.getFavorites);
+router.post('/favoritos/:productId', validarJWT, httpUsers.addToFavorites);
+router.delete('/favoritos/:productId', validarJWT, httpUsers.removeFromFavorites);
 
 // Profile
 router.get('/profile', validarJWT, httpUsers.getProfile);
