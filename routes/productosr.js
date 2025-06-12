@@ -15,7 +15,9 @@ import {
   setProductoOferta,
   getProductosEnOferta,
   generarOfertasAutomaticas,
-  eliminarOfertas
+  eliminarOfertas,
+  getProductoBySlug,
+  actualizarSlugs
 } from '../controllers/productosc.js';
 import upload from '../middleware/upploads.js';
 import { cleanUploads } from '../middleware/upploads.js';
@@ -39,6 +41,12 @@ router.get('/sugerencias-busqueda', getSearchSuggestions);
 router.get('/busqueda', searchProducts);
 router.get('/filtros-alfabeticos/:category', getFiltrosAlfabeticos);
 router.get('/filtro-alfabetico/:category/:campo/:letra', getProductosPorLetra);
+
+// Ruta para actualizar slugs de productos existentes
+router.post('/actualizar-slugs', actualizarSlugs);
+
+// Ruta para obtener producto por slug
+router.get('/slug/:slug', getProductoBySlug);
 
 // Rutas con parámetros genéricos después
 router.get('/:id', getProductoById);
@@ -66,6 +74,8 @@ router.put('/oferta/:id', setProductoOferta);
 router.get('/ofertas', getProductosEnOferta);
 router.post('/generar', generarOfertasAutomaticas);
 router.post('/eliminar-ofertas', eliminarOfertas);
+
+
 
 export default router;
 

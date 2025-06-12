@@ -949,6 +949,123 @@ export const eliminarOfertas = async (req, res) => {
   }
 };
 
+// Obtener producto por slug o ID
+export const getProductoBySlug = async (req, res) => {
+  try {
+    const { slug } = req.params;
+    
+    if (!slug) {
+      return res.status(400).json({ 
+        error: 'Identificador de producto inválido',
+        details: 'El identificador no puede estar vacío'
+      });
+    }
+
+    console.log('Buscando producto con identificador:', slug); // Debug log
+
+    let producto;
+    
+    // Si parece un ID de MongoDB (24 caracteres hexadecimales)
+    if (/^[0-9a-fA-F]{24}$/.test(slug)) {
+      producto = await Producto.findById(slug)
+        .populate('category', 'name')
+        .populate('subcategory', 'name')
+        .populate('marca', 'nombre logo');
+    } else {
+      // Si no es un ID, buscar por slug
+      producto = await Producto.findOne({ slug: slug.toLowerCase() })
+        .populate('category', 'name')
+        .populate('subcategory', 'name')
+        .populate('marca', 'nombre logo');
+    }
+
+    if (!producto) {
+      console.log('Producto no encontrado con identificador:', slug); // Debug log
+      return res.status(404).json({ 
+        error: 'Producto no encontrado',
+        details: `No se encontró ningún producto con el identificador: ${slug}`,
+        searchedIdentifier: slug
+      });
+    }
+
+    console.log('Producto encontrado:', producto._id); // Debug log
+    res.status(200).json(producto);
+  } catch (error) {
+    console.error('Error al obtener producto:', error);
+    res.status(500).json({ 
+      error: 'Error al obtener el producto',
+      details: error.message
+    });
+  }
+};
+
+// Actualizar slugs de productos existentes
+export const actualizarSlugs = async (req, res) => {
+  try {
+    const productos = await Producto.find({});
+    let actualizados = 0;
+    let errores = [];
+    let slugsGenerados = new Set();
+
+    for (const producto of productos) {
+      try {
+        // Generar slug base
+        let baseSlug = producto.nombre
+          .toLowerCase()
+          .normalize('NFD')
+          .replace(/[\u0300-\u036f]/g, '') // Eliminar acentos
+          .replace(/[^a-z0-9]+/g, '-') // Reemplazar caracteres especiales con guiones
+          .replace(/(^-|-$)/g, ''); // Eliminar guiones al inicio y final
+
+        // Si el slug está vacío, usar un fallback
+        if (!baseSlug) {
+          baseSlug = 'producto-' + producto._id.toString().slice(-6);
+        }
+
+        // Asegurar unicidad
+        let slugFinal = baseSlug;
+        let contador = 1;
+        while (slugsGenerados.has(slugFinal)) {
+          slugFinal = `${baseSlug}-${contador}`;
+          contador++;
+        }
+        slugsGenerados.add(slugFinal);
+
+        // Actualizar el producto
+        producto.slug = slugFinal;
+        await producto.save();
+        
+        actualizados++;
+        console.log(`Slug generado para ${producto.nombre}: ${slugFinal}`);
+      } catch (error) {
+        errores.push({
+          productoId: producto._id,
+          nombre: producto.nombre,
+          error: error.message
+        });
+      }
+    }
+
+    res.status(200).json({
+      message: 'Proceso de actualización de slugs completado',
+      actualizados,
+      errores,
+      totalProductos: productos.length,
+      detalles: {
+        productosActualizados: actualizados,
+        productosConError: errores.length,
+        totalProcesados: productos.length
+      }
+    });
+  } catch (error) {
+    console.error('Error al actualizar slugs:', error);
+    res.status(500).json({
+      error: 'Error al actualizar slugs',
+      details: error.message
+    });
+  }
+};
+
 export default {
   createProducto,
   getProductos,
@@ -965,7 +1082,9 @@ export default {
   getProductosEnOferta,
   generarOfertasAutomaticas,
   configurarOfertasAutomaticas,
-  eliminarOfertas
+  eliminarOfertas,
+  getProductoBySlug,
+  actualizarSlugs
 };
 
 

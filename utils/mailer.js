@@ -10,13 +10,13 @@ const transporter = nodemailer.createTransport({
   }
 });
 
-export const sendInvoiceEmail = async (to, subject, text, attachmentPath = null) => {
+export const sendInvoiceEmail = async (to, subject, content, attachmentPath = null) => {
   try {
     const mailOptions = {
       from: `"CCL Soporte" <${process.env.EMAIL_USER}>`,
       to,
       subject,
-      text,
+      html: content,
       attachments: attachmentPath ? [
         {
           filename: 'factura.pdf',
@@ -27,6 +27,7 @@ export const sendInvoiceEmail = async (to, subject, text, attachmentPath = null)
 
     const info = await transporter.sendMail(mailOptions);
     console.log('✅ Email enviado:', info.response);
+    return info;
   } catch (error) {
     console.error('❌ Error enviando email:', error);
     throw error;

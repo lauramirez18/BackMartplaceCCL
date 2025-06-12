@@ -10,7 +10,8 @@ import {
     getOrdenes,
     getOrdenById,
     updateOrden,
-
+    getPayPalOrders,
+    getPayPalOrderDetails
 } from "../controllers/ordenesc.js";
 
 const router = express.Router();
@@ -27,6 +28,8 @@ router.get("/:id", getOrdenById);
 // Ruta para actualizar el estado de una orden
 router.put("/:id", updateOrden);
 
-
+// Nuevas rutas para PayPal
+router.get("/paypal/orders", getPayPalOrders);
+router.get("/paypal/orders/:id", getPayPalOrderDetails);
 
 export default router;
