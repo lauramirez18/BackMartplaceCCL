@@ -19,6 +19,7 @@ const categoriaSchema = new mongoose.Schema({
     ],
   },
   name: { type: String, required: true },
+  slug: { type: String, unique: true },
   img: { type: String },
   description: { type: String, required: true },
   state: { type: String, default: '1' }, 

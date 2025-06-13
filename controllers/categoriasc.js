@@ -2,6 +2,17 @@ import mongoose from 'mongoose';
 import Categoria from '../models/categorias.js';
 import { especificacionesCategorias } from '../utils/especificaciones.js';
 
+// Función para generar slug
+const generarSlug = (text) => {
+  return text
+    .toString()
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/(^-|-$)+/g, '');
+};
+
 // Controlador para crear categoría
 export const createCategoria = async (req, res) => {
   const { codigo, name, description, img } = req.body;
@@ -21,7 +32,8 @@ export const createCategoria = async (req, res) => {
       return res.status(400).json({ error: "Esta categoría ya existe" });
     }
 
-    const categoria = new Categoria({ codigo, name, description, img });
+    const slug = generarSlug(name);
+    const categoria = new Categoria({ codigo, name, description, img, slug });
     await categoria.save();
     res.status(201).json(categoria);
 
@@ -60,6 +72,25 @@ export const getCategoriaById = async (req, res) => {
     if (!categoria) {
       return res.status(404).json({ message: 'Categoría no encontrada' });
     }
+    res.json(categoria);
+  } catch (error) {
+    res.status(500).json({ 
+      error: "Error al obtener categoría",
+      details: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
+  }
+};
+
+// Obtener categoría por slug
+export const getCategoriaBySlug = async (req, res) => {
+  try {
+    const { slug } = req.params;
+    const categoria = await Categoria.findOne({ slug });
+    
+    if (!categoria) {
+      return res.status(404).json({ message: 'Categoría no encontrada' });
+    }
+    
     res.json(categoria);
   } catch (error) {
     res.status(500).json({ 
@@ -272,6 +303,27 @@ export const getFiltersByCategoriaId = async (req, res) => {
   }
 };
 
+// Actualizar slugs de todas las categorías
+export const actualizarSlugs = async (req, res) => {
+  try {
+    const categorias = await Categoria.find();
+    
+    for (const categoria of categorias) {
+      if (!categoria.slug) {
+        categoria.slug = generarSlug(categoria.name);
+        await categoria.save();
+      }
+    }
+    
+    res.json({ message: 'Slugs actualizados correctamente' });
+  } catch (error) {
+    res.status(500).json({ 
+      error: "Error al actualizar slugs",
+      details: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
+  }
+};
+
 export default {
   createCategoria,
   getCategorias,
@@ -279,5 +331,7 @@ export default {
   getEspecificacionesByCategoria,
   updateCategoria,
   toggleCategoriaState,
-  getFiltersByCategoriaId
+  getFiltersByCategoriaId,
+  getCategoriaBySlug,
+  actualizarSlugs
 };

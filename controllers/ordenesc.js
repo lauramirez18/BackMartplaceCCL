@@ -6,7 +6,7 @@ import { sendInvoiceEmail } from "../utils/mailer.js";
 // Crear una nueva orden
 export const createOrden = async (req, res) => {
     try {
-        const { usuarioId, products, paypalOrderId } = req.body;
+        const { usuarioId, products, paypalOrderId, shippingInfo } = req.body;
 
         const usuario = await Usuarios.findById(usuarioId);
         if (!usuario) return res.status(404).json({ message: "Usuario no encontrado" });
@@ -28,7 +28,8 @@ export const createOrden = async (req, res) => {
             total,
             status: 'pendiente',
             paypalOrderId,
-            paymentMethod: 'paypal'
+            paymentMethod: 'paypal',
+            shippingInfo
         });
 
         await nuevaOrden.save();
@@ -47,6 +48,7 @@ export const createOrden = async (req, res) => {
         .footer { text-align: center; padding: 20px; font-size: 12px; color: #666; }
         .order-details { background: #f8f9fa; padding: 15px; margin: 20px 0; }
         .total { font-size: 18px; font-weight: bold; margin-top: 20px; }
+        .shipping-info { margin-top: 20px; padding: 15px; background: #f8f9fa; }
     </style>
 </head>
 <body>
@@ -55,13 +57,25 @@ export const createOrden = async (req, res) => {
             <h2>¡Gracias por tu compra en CCL!</h2>
         </div>
         <div class="content">
-            <p>Hola ${usuario.nombre},</p>
+            <p>Hola ${usuario.name},</p>
             <p>Hemos recibido tu orden y estamos procesándola.</p>
             
             <div class="order-details">
                 <h3>Detalles de tu orden:</h3>
                 <p>${detallesProductos.replace(/\n/g, '<br>')}</p>
                 <p class="total">Total: $${total.toFixed(2)}</p>
+            </div>
+
+            <div class="shipping-info">
+                <h3>Información de envío:</h3>
+                <p><strong>Nombre:</strong> ${shippingInfo.firstName} ${shippingInfo.lastName}</p>
+                <p><strong>Dirección:</strong> ${shippingInfo.address}</p>
+                <p><strong>Ciudad:</strong> ${shippingInfo.city}</p>
+                <p><strong>Estado/Departamento:</strong> ${shippingInfo.state}</p>
+                <p><strong>País:</strong> ${shippingInfo.country}</p>
+                <p><strong>Código Postal:</strong> ${shippingInfo.postalCode}</p>
+                <p><strong>Teléfono:</strong> ${shippingInfo.phone}</p>
+                ${shippingInfo.notes ? `<p><strong>Notas de entrega:</strong> ${shippingInfo.notes}</p>` : ''}
             </div>
 
             <p>Estado de la orden: <strong>pendiente</strong></p>

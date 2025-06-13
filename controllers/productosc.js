@@ -112,6 +112,7 @@ export const getProductos = async (req, res) => {
     const {
       category,
       subcategory,
+      marca,
       minPrice,
       maxPrice,
       search,
@@ -127,6 +128,7 @@ export const getProductos = async (req, res) => {
     // Filtros básicos
     if (category) filtro.category = category;
     if (subcategory) filtro.subcategory = subcategory;
+    if (marca) filtro.marca = marca;
     
     // Filtro por precio
     if (minPrice || maxPrice) {
@@ -181,7 +183,7 @@ export const getProductos = async (req, res) => {
     let query = Producto.find(filtro)
       .populate('category', 'name codigo')
       .populate('subcategory', 'name')
-      .populate('marca', 'nombre logo')
+      .populate('marca', 'nombre logo slug')
       .sort(sortOption);
 
     // Paginación
@@ -199,18 +201,20 @@ export const getProductos = async (req, res) => {
         pagination: {
           total,
           page: Number(page),
-          limit: Number(limit),
-          totalPages
+          totalPages,
+          limit: Number(limit)
         }
       });
-    } else {
-      const productos = await query;
-      return res.status(200).json(productos);
     }
+
+    // Formato simple (solo IDs y nombres)
+    const productos = await query.select('_id nombre');
+    res.status(200).json(productos);
+
   } catch (error) {
     console.error('Error al obtener productos:', error);
     res.status(500).json({
-      error: 'Error al obtener productos',
+      message: 'Error al obtener productos',
       details: process.env.NODE_ENV === 'development' ? error.message : undefined
     });
   }

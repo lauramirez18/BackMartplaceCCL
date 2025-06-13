@@ -2,10 +2,12 @@ import { Router } from 'express';
 import {
   createCategoria,
   getCategorias,
-  getCategoriaById, // Add this new import
+  getCategoriaById,
   getEspecificacionesByCategoria,
   updateCategoria,
-  toggleCategoriaState
+  toggleCategoriaState,
+  getCategoriaBySlug,
+  actualizarSlugs
 } from '../controllers/categoriasc.js';
 
 const router = Router();
@@ -16,5 +18,9 @@ router.get('/:id', getCategoriaById);
 router.get('/:codigo/especificaciones', getEspecificacionesByCategoria);
 router.put('/:id', updateCategoria);
 router.put('/estado/:id', toggleCategoriaState);
+
+// Nuevas rutas para slugs
+router.get('/slug/:slug', getCategoriaBySlug);
+router.post('/actualizar-slugs', actualizarSlugs);
 
 export default router;
