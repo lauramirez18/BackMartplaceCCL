@@ -16,6 +16,9 @@ import marcasRoutes from './routes/marcasr.js';
 import { configurarOfertasAutomaticas } from './controllers/productosc.js';
 dotenv.config();
 
+
+
+
 const app = express();
 
 const corsOptions = {

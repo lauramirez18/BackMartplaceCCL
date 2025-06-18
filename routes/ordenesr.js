@@ -11,7 +11,9 @@ import {
     getOrdenById,
     updateOrden,
     getPayPalOrders,
-    getPayPalOrderDetails
+    getPayPalOrderDetails,
+    getOrdenesByUsuario,
+    confirmarPagoPayPal
 } from "../controllers/ordenesc.js";
 
 const router = express.Router();
@@ -25,8 +27,14 @@ router.get("/", getOrdenes);
 // Ruta para obtener una orden por ID
 router.get("/:id", getOrdenById);
 
+// Ruta para obtener órdenes por ID de usuario
+router.get("/usuario/:usuarioId", getOrdenesByUsuario);
+
 // Ruta para actualizar el estado de una orden
 router.put("/:id", updateOrden);
+
+// Ruta para confirmar pago de PayPal
+router.post("/confirmar-pago", confirmarPagoPayPal);
 
 // Nuevas rutas para PayPal
 router.get("/paypal/orders", getPayPalOrders);
