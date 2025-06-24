@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import httpUsers from '../controllers/usuarioc.js';
-import { validarJWT } from '../middlewares/auth.js';
+import { validarJWT } from '../middleware/auth.js';
 import upload from '../middleware/upploads.js';
 import { cleanUploads } from '../middleware/upploads.js';
 
